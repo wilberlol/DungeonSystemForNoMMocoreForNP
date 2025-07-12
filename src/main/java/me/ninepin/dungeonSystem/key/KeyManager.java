@@ -16,10 +16,7 @@ import org.bukkit.persistence.PersistentDataType;
 
 import java.io.File;
 import java.io.IOException;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
 public class KeyManager {
     private final DungeonSystem plugin;
@@ -27,7 +24,7 @@ public class KeyManager {
     private FileConfiguration keyConfig;
     private final NamespacedKey dungeonKeyKey;
     private final NamespacedKey dungeonTypeKey;
-
+    private final Map<UUID, Long> playerKeyCooldowns;
     // 儲存副本基礎ID到實例ID的映射
     private final Map<String, String> baseToDungeonId;
 
@@ -36,6 +33,7 @@ public class KeyManager {
         this.keyFile = new File(plugin.getDataFolder(), "keys.yml");
         this.dungeonKeyKey = new NamespacedKey(plugin, "dungeon_key");
         this.dungeonTypeKey = new NamespacedKey(plugin, "dungeon_type");
+        this.playerKeyCooldowns = new HashMap<>();
         this.baseToDungeonId = new HashMap<>();
         loadConfig();
     }
@@ -59,7 +57,6 @@ public class KeyManager {
         // 清空現有的配置信息
         keyConfig = null;
         baseToDungeonId.clear();
-
         // 重新加載配置
         loadConfig();
         // 重新初始化副本鑰匙
@@ -157,8 +154,32 @@ public class KeyManager {
         }
         saveConfig();
     }
+
+    /**
+     * 檢查玩家是否在鑰匙使用冷卻中
+     *
+     * @param playerId 玩家UUID
+     * @return 是否在冷卻中
+     */
+    public boolean isPlayerOnKeyCooldown(UUID playerId) {
+        Long cooldownEnd = playerKeyCooldowns.get(playerId);
+        if (cooldownEnd == null) {
+            return false;
+        }
+
+        long currentTime = System.currentTimeMillis();
+        if (currentTime >= cooldownEnd) {
+            // 冷卻已結束，移除記錄
+            playerKeyCooldowns.remove(playerId);
+            return false;
+        }
+
+        return true;
+    }
+
     /**
      * 獲取鑰匙的音效配置
+     *
      * @param baseId 副本基礎ID
      * @return 包含音效信息的 Map，如果沒有配置則返回預設值
      */
@@ -181,6 +202,7 @@ public class KeyManager {
 
     /**
      * 播放鑰匙使用音效
+     *
      * @param player 玩家
      * @param baseId 副本基礎ID
      */
@@ -199,6 +221,7 @@ public class KeyManager {
             player.playSound(player.getLocation(), Sound.ENTITY_EXPERIENCE_ORB_PICKUP, 1.0f, 1.0f);
         }
     }
+
     /**
      * 建立副本基礎ID到實例ID的映射
      */
@@ -382,13 +405,6 @@ public class KeyManager {
 
     public NamespacedKey getDungeonKeyKey() {
         return dungeonKeyKey;
-    }
-
-    /**
-     * 獲取所有可用的副本基礎ID
-     */
-    public List<String> getAvailableBaseIds() {
-        return new ArrayList<>(baseToDungeonId.keySet());
     }
 
     /**

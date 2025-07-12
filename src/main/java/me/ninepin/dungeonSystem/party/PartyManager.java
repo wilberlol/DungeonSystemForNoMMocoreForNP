@@ -5,12 +5,26 @@ import org.bukkit.entity.Player;
 
 import java.util.*;
 
-public class PartyManager {
+public class PartyManager implements IPartySystem {
     private final DungeonSystem plugin;
     private final Map<UUID, Party> parties; // Party ID -> Party
     private final Map<UUID, UUID> playerParties; // Player UUID -> Party ID
     private final Map<UUID, UUID> pendingInvites; // Target UUID -> Inviter UUID
-
+    @Override
+    public boolean isInSameParty(UUID player1, UUID player2) {
+        Party party1 = getPlayerParty(player1);
+        Party party2 = getPlayerParty(player2);
+        return party1 != null && party2 != null && party1.getId().equals(party2.getId());
+    }
+    @Override
+    public boolean hasParty(UUID playerId) {
+        return getPlayerParty(playerId) != null;
+    }
+    @Override
+    public boolean isPartyLeader(UUID playerId) {
+        Party party = getPlayerParty(playerId);
+        return party != null && party.isOwner(playerId);
+    }
     public PartyManager(DungeonSystem plugin) {
         this.plugin = plugin;
         this.parties = new HashMap<>();
@@ -265,6 +279,7 @@ public class PartyManager {
         }
     }
 
+    @Override
     public Set<UUID> getPartyMembers(UUID playerId) {
         Party party = getPlayerParty(playerId);
         if (party == null) {

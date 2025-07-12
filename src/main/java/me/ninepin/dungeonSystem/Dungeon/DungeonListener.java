@@ -16,12 +16,10 @@ public class DungeonListener implements Listener {
 
     private final DungeonSystem plugin;
     private final DungeonManager dungeonManager;
-    private final WaveDungeonManager waveDungeonManager;
 
     public DungeonListener(DungeonSystem plugin) {
         this.plugin = plugin;
         this.dungeonManager = plugin.getDungeonManager();
-        this.waveDungeonManager = plugin.getWaveDungeonManager();
     }
 
     @EventHandler

@@ -56,13 +56,17 @@ public class Party {
     }
 
     // Party management methods
-    // 改為這個方法
     public boolean addMember(UUID playerId) {
         if (members.size() >= maxSize) {
             return false;
         }
 
-        // 嘗試獲取玩家名稱
+        // Check if player is already in the party
+        if (members.containsKey(playerId)) {
+            return false;
+        }
+
+        // Try to get player name
         String playerName = "Unknown";
         Player player = Bukkit.getPlayer(playerId);
         if (player != null) {
@@ -73,23 +77,29 @@ public class Party {
         return true;
     }
 
-    // 並添加這個方法以保持向後兼容
-    public boolean addMember(Player player) {
-        return addMember(player.getUniqueId());
-    }
-
     public boolean removeMember(UUID playerId) {
+        // Cannot remove the owner
         if (isOwner(playerId)) {
-            return false; // Can't remove owner
+            return false;
         }
+
         return members.remove(playerId) != null;
     }
 
-    public boolean transferOwnership(UUID newOwnerId) {
-        if (!members.containsKey(newOwnerId)) {
-            return false;
-        }
-        this.ownerId = newOwnerId;
-        return true;
+    public boolean isFull() {
+        return members.size() >= maxSize;
+    }
+
+    public boolean isEmpty() {
+        return members.isEmpty();
+    }
+    @Override
+    public String toString() {
+        return "Party{" +
+                "id=" + id +
+                ", ownerId=" + ownerId +
+                ", members=" + members.size() +
+                ", maxSize=" + maxSize +
+                '}';
     }
 }

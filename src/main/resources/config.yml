@@ -1,10 +1,44 @@
 # config.yml 文件示例
-
+key-settings:
+  # 鑰匙使用冷卻時間（秒）
+  # 預設值：180 (3分鐘)
+  cooldown-seconds: 2
 settings:
   exit-point: "world,0,64,0,0,0"
   revival-system-enabled: true
+ranking:
+  hologram-update-interval: 5 # 自動更新間隔（秒）
+# 組隊系統設定
+party:
+  # 選擇組隊系統類型: "custom" 或 "mmocore"
+  system-type: "custom"
+wave-dungeon:
+  force-next-wave-countdown: 300
+  sounds:
+    countdown: "BLOCK_NOTE_BLOCK_PLING"
+    wave-start: "ENTITY_ENDER_DRAGON_GROWL"
+    wave-clear: "ENTITY_PLAYER_LEVELUP"
+    dungeon-complete: "UI_TOAST_CHALLENGE_COMPLETE"
+    force-next-wave: "BLOCK_ANVIL_LAND"  # 新增：強制下一波音效
+  sound-options:
+    volume: 1.0
+    pitch: 1.0
+    countdown-pitch: 1.2
+    force-next-wave-pitch: 0.8  # 新增：強制下一波音效的音調
+mob-scaling:
+  # 普通怪物數量倍率（根據玩家數量）
+  normal-multipliers:
+    "1": 1.0    # 1人時，怪物數量 × 1.0
+    "2": 2.0    # 2人時，怪物數量 × 2.0
+    "3": 3.0    # 3人時，怪物數量 × 3.0
+    "4": 4.0    # 4人時，怪物數量 × 4.0
 
-  
+  # BOSS等級加成（根據玩家數量）
+  boss-level-bonus:
+    "1": 0      # 1人時，BOSS等級 +0
+    "2": 5      # 2人時，BOSS等級 +5
+    "3": 10     # 3人時，BOSS等級 +10
+    "4": 15     # 4人時，BOSS等級 +15
 dungeons:
   # 普通副本示例
   dungeon_normal_1:
@@ -29,6 +63,7 @@ dungeons:
     type: "wave"
     level-required: 10
     max-players: 5
+    display-name: §2§l《囈語之森》
     spawn-point: "world,200,64,200,0,0"
     death-waiting-area: "world,210,64,210,0,0"
     target-mob: "boss_dragon"  # 最终Boss (如果有的话)
@@ -74,40 +109,34 @@ dungeons:
     spawn-point: "world,-100,64,-100,0,0"
     death-waiting-area: "world,-110,64,-110,0,0"
     waves:
-      total: 5  # 总波数
+      total: 3  # 总波数
       # 第一波
       wave-1:
-        - id: "dungeon_spider"
-          location: "world,-120,64,-120,0,0"
-        - id: "dungeon_spider"
-          location: "world,-125,64,-125,0,0"
+        - amount: 3
+          level: 2
+          location: test,2475.80,135.00,-2280.62
+          id: Goblin_Warrior
+          radius: 5.0
+          type: NORMAL
       # 第二波
       wave-2:
-        - id: "dungeon_spider"
-          location: "world,-130,64,-130,0,0"
-        - id: "dungeon_spider"
-          location: "world,-135,64,-135,0,0"
-        - id: "dungeon_spider_elite"
-          location: "world,-140,64,-140,0,0"
+        - amount: 3
+          level: 2
+          location: test,2475.80,135.00,-2280.62
+          id: Goblin_Warrior
+          radius: 5.0
+          type: NORMAL
       # 第三波
       wave-3:
-        - id: "dungeon_spider_elite"
-          location: "world,-145,64,-145,0,0"
-        - id: "dungeon_spider_elite"
-          location: "world,-150,64,-150,0,0"
-      # 第四波
-      wave-4:
-        - id: "dungeon_cave_spider"
-          location: "world,-155,64,-155,0,0"
-        - id: "dungeon_cave_spider"
-          location: "world,-160,64,-160,0,0"
-        - id: "dungeon_cave_spider"
-          location: "world,-165,64,-165,0,0"
-      # 第五波
-      wave-5:
-        - id: "dungeon_spider_queen"
-          location: "world,-170,64,-170,0,0"
-        - id: "dungeon_spider_elite"
-          location: "world,-175,64,-175,0,0"
-        - id: "dungeon_spider_elite"
-          location: "world,-180,64,-180,0,0"
+        - amount: 3
+          level: 2
+          location: test,2475.80,135.00,-2280.62
+          id: Goblin_Warrior
+          radius: 5.0
+          type: NORMAL
+        - amount: 1
+          level: 1
+          location: test,2475.94,135.00,-2281.59
+          id: Orc_King
+          radius: 5.0
+          type: BOSS

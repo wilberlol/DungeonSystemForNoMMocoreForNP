@@ -3,6 +3,7 @@ package me.ninepin.dungeonSystem.Dungeon;
 import io.lumine.mythic.bukkit.MythicBukkit;
 import io.lumine.mythic.core.mobs.ActiveMob;
 import me.ninepin.dungeonSystem.DungeonSystem;
+import me.ninepin.dungeonSystem.damage.PlayerRanking;
 import org.bukkit.Bukkit;
 import org.bukkit.Location;
 import org.bukkit.Sound;
@@ -22,6 +23,8 @@ public class WaveDungeonManager {
     private final Map<String, Boolean> waveCleared; // 记录当前波次是否已清理
     private final Map<String, Integer> nextWaveCountdowns; // 储存下一波的倒计时（秒）
     private final Map<String, BukkitTask> countdownTasks; // 储存倒计时任务
+    private final Map<String, BukkitTask> forceNextWaveTasks; // 储存强制开启下一波的任务
+    private final Map<String, Integer> forceNextWaveCountdowns; // 储存强制开启下一波的剩余时间
 
     public WaveDungeonManager(DungeonSystem plugin, DungeonManager dungeonManager) {
         this.plugin = plugin;
@@ -31,6 +34,8 @@ public class WaveDungeonManager {
         this.waveCleared = new HashMap<>();
         this.nextWaveCountdowns = new HashMap<>();
         this.countdownTasks = new HashMap<>();
+        this.forceNextWaveTasks = new HashMap<>(); // 新增
+        this.forceNextWaveCountdowns = new HashMap<>(); // 新增
     }
 
     /**
@@ -85,16 +90,16 @@ public class WaveDungeonManager {
         // 记录日志
         plugin.getLogger().info("开始副本 " + dungeonId + " 下一次倒數: " + seconds + "秒");
 
-        // 清理旧的倒计时资源
+        // 清理旧倒计时资源
         cleanupCountdown(dungeonId);
 
         // 储存倒计时秒数
         nextWaveCountdowns.put(dungeonId, seconds);
 
         // 通知玩家
-        broadcastToDungeon(dungeonId, "§e小心下一波怪物，" + seconds + "秒後開始...");
+        broadcastToDungeon(dungeonId, "§e下一波怪物將在 " + seconds + " 秒後開始...");
 
-        // 创建新的倒计时任务
+        // 创建新倒计时任务
         BukkitTask task = new BukkitRunnable() {
             @Override
             public void run() {
@@ -134,6 +139,9 @@ public class WaveDungeonManager {
                     // 仅在特定时间点通知玩家
                     if (remainingSeconds <= 5 || remainingSeconds % 5 == 0) {
                         broadcastToDungeon(dungeonId, "§e下一波怪物將在 " + remainingSeconds + " 秒後出現...");
+                        if (remainingSeconds <= 5) {
+                            playCountdownSound(dungeonId);
+                        }
                     }
                 }
             }
@@ -259,19 +267,40 @@ public class WaveDungeonManager {
             return;
         }
 
-        // 创建或获取当前副本的实体集合
+        // 計算當前副本中的玩家數量
+        int playerCount = 0;
+        for (Map.Entry<UUID, String> entry : dungeonManager.getPlayerDungeons().entrySet()) {
+            if (dungeonId.equals(entry.getValue())) {
+                Player player = Bukkit.getPlayer(entry.getKey());
+                if (player != null && player.isOnline()) {
+                    playerCount++;
+                }
+            }
+        }
+
+        // 獲取或創建當前副本的實體集合（不清空，保留上一波存活的怪物）
         Set<UUID> entities = waveEntities.computeIfAbsent(dungeonId, k -> new HashSet<>());
-        entities.clear(); // 清空上一波的实体记录
+        // 注意：這裡不調用 entities.clear()，保留上一波的怪物記錄
 
         int successfulSpawns = 0;
         int totalMobsToSpawn = 0;
 
-        // 先計算總共要生成多少隻怪物
+        plugin.getLogger().info("正在為副本 " + dungeonId + " 第 " + currentWave + " 波生成怪物，玩家數量: " + playerCount);
+
+        // 先計算總共要生成多少隻怪物（應用縮放後）
         for (DungeonMob mob : mobs) {
-            totalMobsToSpawn += mob.getAmount();
+            if (mob.isNormal()) {
+                // 普通怪物：根據人數調整數量
+                double multiplier = dungeonManager.getNormalMobMultiplier(playerCount);
+                int scaledAmount = (int) Math.ceil(mob.getAmount() * multiplier);
+                totalMobsToSpawn += scaledAmount;
+            } else {
+                // BOSS怪物：數量不變
+                totalMobsToSpawn += mob.getAmount();
+            }
         }
 
-        // 生成怪物
+        // 生成怪物（應用縮放邏輯）
         for (DungeonMob mob : mobs) {
             try {
                 if (mob.getId() == null || mob.getLocation() == null) {
@@ -279,14 +308,33 @@ public class WaveDungeonManager {
                     continue;
                 }
 
-                // 根據 amount 生成多隻怪物
-                int amount = mob.getAmount();
+                int finalAmount;
+                int finalLevel;
+
+                if (mob.isNormal()) {
+                    // 普通怪物：根據人數調整數量
+                    double multiplier = dungeonManager.getNormalMobMultiplier(playerCount);
+                    finalAmount = (int) Math.ceil(mob.getAmount() * multiplier);
+                    finalLevel = mob.getLevel(); // 等級不變
+                    plugin.getLogger().info("波次 " + currentWave + " 普通怪物 " + mob.getId() + " 數量從 " + mob.getAmount() + " 調整為 " + finalAmount + " (倍率: " + multiplier + ")");
+                } else if (mob.isBoss()) {
+                    // BOSS怪物：數量不變，根據人數調整等級
+                    finalAmount = mob.getAmount();
+                    int levelBonus = dungeonManager.getBossLevelBonus(playerCount);
+                    finalLevel = mob.getLevel() + levelBonus;
+                    plugin.getLogger().info("波次 " + currentWave + " BOSS怪物 " + mob.getId() + " 等級從 " + mob.getLevel() + " 調整為 " + finalLevel + " (加成: +" + levelBonus + ")");
+                } else {
+                    // 預設情況
+                    finalAmount = mob.getAmount();
+                    finalLevel = mob.getLevel();
+                }
+
                 double radius = mob.getRadius();
                 Location baseLocation = mob.getLocation();
 
-                plugin.getLogger().info("在副本 " + dungeonId + " 的波次 " + currentWave + " 中準備生成 " + amount + " 隻 " + mob.getId());
+                plugin.getLogger().info("在副本 " + dungeonId + " 的波次 " + currentWave + " 中準備生成 " + finalAmount + " 隻 " + mob.getType() + " 類型的 " + mob.getId());
 
-                for (int i = 0; i < amount; i++) {
+                for (int i = 0; i < finalAmount; i++) {
                     Location spawnLocation;
 
                     if (radius > 0) {
@@ -297,14 +345,22 @@ public class WaveDungeonManager {
                         spawnLocation = baseLocation.clone();
                     }
 
-                    ActiveMob entity = MythicBukkit.inst().getMobManager().spawnMob(mob.getId(), spawnLocation);
+                    ActiveMob entity = null;
+                    if (finalLevel > 1) {
+                        // 使用調整後的等級生成怪物
+                        entity = MythicBukkit.inst().getMobManager().spawnMob(mob.getId(), spawnLocation, finalLevel);
+                    } else {
+                        // 使用預設等級生成怪物
+                        entity = MythicBukkit.inst().getMobManager().spawnMob(mob.getId(), spawnLocation);
+                    }
+
                     if (entity != null) {
                         entities.add(entity.getUniqueId());
                         successfulSpawns++;
 
                         // 更详细的日志信息
-                        plugin.getLogger().info("在副本 " + dungeonId + " 的波次 " + currentWave + " 中生成怪物 " +
-                                mob.getId() + " 在 " + locationToString(spawnLocation));
+                        plugin.getLogger().info("在副本 " + dungeonId + " 的波次 " + currentWave + " 中生成 " + mob.getType() + " 怪物 " +
+                                mob.getId() + " (等級 " + finalLevel + ") 在 " + locationToString(spawnLocation));
                     } else {
                         plugin.getLogger().warning("无法生成怪物: " + mob.getId() + "，MythicMobs返回空实体");
                     }
@@ -323,15 +379,216 @@ public class WaveDungeonManager {
             return;
         }
 
-        // 通知玩家
-        broadcastToDungeon(dungeonId, "§c第 " + currentWave + " 波怪物已生成，共 " + successfulSpawns + " 隻！");
+        // 計算總怪物數量（包括上一波存活的）
+        int totalMobs = entities.size(); // 這包括了上一波存活的怪物
+        int previousWaveMobs = totalMobs - successfulSpawns;
+
+        // 通知玩家（包含縮放信息）
+        if (previousWaveMobs > 0) {
+            if (playerCount > 1) {
+                broadcastToDungeon(dungeonId, "§c第 " + currentWave + " 波怪物已生成！（已根據 " + playerCount + " 人調整難度）");
+                broadcastToDungeon(dungeonId, "§e新增 " + successfulSpawns + " 隻怪物 + " + previousWaveMobs + " 隻上波存活 = 總計 " + totalMobs + " 隻");
+            } else {
+                broadcastToDungeon(dungeonId, "§c第 " + currentWave + " 波怪物已生成，共 " + successfulSpawns + " 隻新怪物（加上 " + previousWaveMobs + " 隻上一波存活怪物，總計 " + totalMobs + " 隻）！");
+            }
+        } else {
+            if (playerCount > 1) {
+                broadcastToDungeon(dungeonId, "§c第 " + currentWave + " 波怪物已生成！（已根據 " + playerCount + " 人調整難度）");
+                broadcastToDungeon(dungeonId, "§e共生成 " + successfulSpawns + " 隻怪物！");
+            } else {
+                broadcastToDungeon(dungeonId, "§c第 " + currentWave + " 波怪物已生成，共 " + successfulSpawns + " 隻！");
+            }
+        }
+
+        playWaveStartSound(dungeonId);
         if (totalMobsToSpawn != successfulSpawns) {
             plugin.getLogger().warning("波次 " + currentWave + " 預計生成 " + totalMobsToSpawn + " 隻怪物，實際成功生成 " + successfulSpawns + " 隻");
         }
 
         if (currentWave == waveDungeon.getTotalWaves()) {
             broadcastToDungeon(dungeonId, "§6这是最后一波怪物了，加油！");
+            // 最後一波不啟動強制下一波倒數
+            plugin.getLogger().info("副本 " + dungeonId + " 已到達最後一波（第 " + currentWave + " 波），不啟動強制下一波倒數");
+        } else {
+            // 不是最後一波才開始強制下一波倒數
+            int forceNextWaveTime = plugin.getConfig().getInt("wave-dungeon.force-next-wave-countdown", 300); // 預設 5 分鐘
+            startForceNextWaveCountdown(dungeonId, forceNextWaveTime);
         }
+    }
+
+    // 4. 新增方法：開始強制下一波的倒數
+    private void startForceNextWaveCountdown(String dungeonId, int seconds) {
+        // 记录日志
+        plugin.getLogger().info("開始副本 " + dungeonId + " 強制下一波倒數: " + seconds + "秒");
+
+        // 清理旧的强制倒计时任务
+        cleanupForceNextWaveCountdown(dungeonId);
+
+        // 储存强制倒计时秒数
+        forceNextWaveCountdowns.put(dungeonId, seconds);
+
+        // 创建强制倒计时任务
+        BukkitTask task = new BukkitRunnable() {
+            @Override
+            public void run() {
+                // 检查副本是否还活跃
+                if (!dungeonManager.isDungeonActive(dungeonId)) {
+                    cleanupForceNextWaveCountdown(dungeonId);
+                    cancel();
+                    return;
+                }
+
+                // 检查当前波次是否已经被清理（正常完成）
+                if (waveCleared.getOrDefault(dungeonId, false)) {
+                    cleanupForceNextWaveCountdown(dungeonId);
+                    cancel();
+                    return;
+                }
+
+                // 确保我们有强制倒计时数据
+                Integer remainingSeconds = forceNextWaveCountdowns.get(dungeonId);
+                if (remainingSeconds == null) {
+                    cleanupForceNextWaveCountdown(dungeonId);
+                    cancel();
+                    return;
+                }
+
+                remainingSeconds--;
+
+                if (remainingSeconds <= 0) {
+                    // 强制倒计时结束，强制开始下一波
+                    cleanupForceNextWaveCountdown(dungeonId);
+                    cancel();
+
+                    // 获取当前活着的怪物数量
+                    Set<UUID> currentEntities = waveEntities.getOrDefault(dungeonId, new HashSet<>());
+                    int survivingMobs = 0;
+                    Set<UUID> survivingEntities = new HashSet<>();
+
+                    // 检查哪些怪物还活着
+                    for (UUID entityId : currentEntities) {
+                        for (org.bukkit.World world : Bukkit.getWorlds()) {
+                            for (Entity entity : world.getEntities()) {
+                                if (entity.getUniqueId().equals(entityId)) {
+                                    survivingEntities.add(entityId);
+                                    survivingMobs++;
+                                    break;
+                                }
+                            }
+                        }
+                    }
+
+                    // 計算玩家數量，用於縮放提示
+                    int playerCount = 0;
+                    for (Map.Entry<UUID, String> entry : dungeonManager.getPlayerDungeons().entrySet()) {
+                        if (dungeonId.equals(entry.getValue())) {
+                            Player player = Bukkit.getPlayer(entry.getKey());
+                            if (player != null && player.isOnline()) {
+                                playerCount++;
+                            }
+                        }
+                    }
+
+                    // 强制进入下一波（包含縮放信息）
+                    if (survivingMobs > 0) {
+                        if (playerCount > 1) {
+                            broadcastToDungeon(dungeonId, "§c§l時間到！强制開始下一波！（根據 " + playerCount + " 人調整難度）");
+                            broadcastToDungeon(dungeonId, "§e" + survivingMobs + " 隻上波存活怪物將併入下一波");
+                        } else {
+                            broadcastToDungeon(dungeonId, "§c§l時間到！强制開始下一波！（" + survivingMobs + " 隻上一波怪物將併入下一波）");
+                        }
+                    } else {
+                        if (playerCount > 1) {
+                            broadcastToDungeon(dungeonId, "§c§l時間到！强制開始下一波！（根據 " + playerCount + " 人調整難度）");
+                        } else {
+                            broadcastToDungeon(dungeonId, "§c§l時間到！强制開始下一波！");
+                        }
+                    }
+
+                    playForceNextWaveSound(dungeonId);
+
+                    // 保留上一波存活的怪物，並將它們合併到下一波
+                    // 這裡不清空 waveEntities，讓上一波存活的怪物成為下一波的一部分
+
+                    // 標記當前波次為已清理，讓系統進入下一波
+                    waveCleared.put(dungeonId, true);
+
+                    // 使用延迟任务开始下一波
+                    new BukkitRunnable() {
+                        @Override
+                        public void run() {
+                            // 在 startNextWave 中，上一波的存活怪物會自動合併到下一波
+                            startNextWaveCountdown(dungeonId, 5);
+                        }
+                    }.runTask(plugin);
+                } else {
+                    // 更新强制倒计时
+                    forceNextWaveCountdowns.put(dungeonId, remainingSeconds);
+
+                    // 在关键时间点通知玩家
+                    if (remainingSeconds <= 30 && remainingSeconds % 10 == 0) {
+                        broadcastToDungeon(dungeonId, "§c§l警告！強制進入下一波倒數: " + remainingSeconds + " 秒");
+                    } else if (remainingSeconds <= 60 && remainingSeconds % 30 == 0) {
+                        broadcastToDungeon(dungeonId, "§e強制進入下一波倒數: " + remainingSeconds + " 秒");
+                    } else if (remainingSeconds <= 300 && remainingSeconds % 60 == 0) {
+                        // 新增：在前5分鐘，每分鐘提醒一次
+                        int minutes = remainingSeconds / 60;
+                        broadcastToDungeon(dungeonId, "§7提醒：還有 " + minutes + " 分鐘將強制進入下一波");
+                    }
+
+                    if (remainingSeconds <= 5) {
+                        playCountdownSound(dungeonId);
+                    }
+                }
+            }
+        }.runTaskTimer(plugin, 20L, 20L); // 每秒执行一次
+
+        // 储存任务
+        forceNextWaveTasks.put(dungeonId, task);
+    }
+
+    /**
+     * 播放強制下一波音效给副本中的所有玩家
+     */
+    private void playForceNextWaveSound(String dungeonId) {
+        DungeonSystem.SoundConfig config = plugin.getSoundConfig();
+        if (config == null) {
+            plugin.getLogger().warning("音效配置未載入，跳過強制下一波音效播放");
+            return;
+        }
+
+        try {
+            // 使用倒數音效，但音調調低一點表示警告
+            Sound sound = Sound.valueOf(config.getCountdownSound());
+            for (Map.Entry<UUID, String> entry : dungeonManager.getPlayerDungeons().entrySet()) {
+                if (dungeonId.equals(entry.getValue())) {
+                    Player player = Bukkit.getPlayer(entry.getKey());
+                    if (player != null && player.isOnline()) {
+                        player.playSound(player.getLocation(), sound,
+                                (float) config.getVolume(),
+                                (float) (config.getCountdownPitch() * 0.8)); // 音調調低表示警告
+                    }
+                }
+            }
+        } catch (IllegalArgumentException e) {
+            plugin.getLogger().warning("無效的音效: " + config.getCountdownSound());
+        }
+    }
+
+    private void cleanupForceNextWaveCountdown(String dungeonId) {
+        // 取消任务
+        BukkitTask oldTask = forceNextWaveTasks.remove(dungeonId);
+        if (oldTask != null) {
+            try {
+                oldTask.cancel();
+                plugin.getLogger().info("已取消副本 " + dungeonId + " 的強制下一波倒计时任务");
+            } catch (Exception e) {
+                plugin.getLogger().warning("取消副本 " + dungeonId + " 的強制下一波倒计时任务时发生错误: " + e.getMessage());
+            }
+        }
+
+        // 清除强制倒计时数据
+        forceNextWaveCountdowns.remove(dungeonId);
     }
 
     /**
@@ -373,6 +630,114 @@ public class WaveDungeonManager {
     }
 
     /**
+     * 播放倒數音效给副本中的所有玩家
+     */
+    private void playCountdownSound(String dungeonId) {
+        DungeonSystem.SoundConfig config = plugin.getSoundConfig();
+        if (config == null) {
+            plugin.getLogger().warning("音效配置未載入，跳過倒數音效播放");
+            return;
+        }
+
+        try {
+            Sound sound = Sound.valueOf(config.getCountdownSound());
+            for (Map.Entry<UUID, String> entry : dungeonManager.getPlayerDungeons().entrySet()) {
+                if (dungeonId.equals(entry.getValue())) {
+                    Player player = Bukkit.getPlayer(entry.getKey());
+                    if (player != null && player.isOnline()) {
+                        player.playSound(player.getLocation(), sound,
+                                (float) config.getVolume(),
+                                (float) config.getCountdownPitch());
+                    }
+                }
+            }
+        } catch (IllegalArgumentException e) {
+            plugin.getLogger().warning("無效的倒數音效: " + config.getCountdownSound());
+        }
+    }
+
+    /**
+     * 播放波次完成音效给副本中的所有玩家
+     */
+    private void playWaveClearSound(String dungeonId) {
+        DungeonSystem.SoundConfig config = plugin.getSoundConfig();
+        if (config == null) {
+            plugin.getLogger().warning("音效配置未載入，跳過波次完成音效播放");
+            return;
+        }
+
+        try {
+            Sound sound = Sound.valueOf(config.getWaveClearSound());
+            for (Map.Entry<UUID, String> entry : dungeonManager.getPlayerDungeons().entrySet()) {
+                if (dungeonId.equals(entry.getValue())) {
+                    Player player = Bukkit.getPlayer(entry.getKey());
+                    if (player != null && player.isOnline()) {
+                        player.playSound(player.getLocation(), sound,
+                                (float) config.getVolume(),
+                                (float) config.getPitch());
+                    }
+                }
+            }
+        } catch (IllegalArgumentException e) {
+            plugin.getLogger().warning("無效的波次完成音效: " + config.getWaveClearSound());
+        }
+    }
+
+    /**
+     * 播放副本完成音效给副本中的所有玩家
+     */
+    private void playDungeonCompleteSound(String dungeonId) {
+        DungeonSystem.SoundConfig config = plugin.getSoundConfig();
+        if (config == null) {
+            plugin.getLogger().warning("音效配置未載入，跳過副本完成音效播放");
+            return;
+        }
+
+        try {
+            Sound sound = Sound.valueOf(config.getDungeonCompleteSound());
+            for (Map.Entry<UUID, String> entry : dungeonManager.getPlayerDungeons().entrySet()) {
+                if (dungeonId.equals(entry.getValue())) {
+                    Player player = Bukkit.getPlayer(entry.getKey());
+                    if (player != null && player.isOnline()) {
+                        player.playSound(player.getLocation(), sound,
+                                (float) config.getVolume(),
+                                (float) config.getPitch());
+                    }
+                }
+            }
+        } catch (IllegalArgumentException e) {
+            plugin.getLogger().warning("無效的副本完成音效: " + config.getDungeonCompleteSound());
+        }
+    }
+
+    /**
+     * 播放波次開始音效给副本中的所有玩家
+     */
+    private void playWaveStartSound(String dungeonId) {
+        DungeonSystem.SoundConfig config = plugin.getSoundConfig();
+        if (config == null) {
+            plugin.getLogger().warning("音效配置未載入，跳過波次開始音效播放");
+            return;
+        }
+
+        try {
+            Sound sound = Sound.valueOf(config.getWaveStartSound());
+            for (Map.Entry<UUID, String> entry : dungeonManager.getPlayerDungeons().entrySet()) {
+                if (dungeonId.equals(entry.getValue())) {
+                    Player player = Bukkit.getPlayer(entry.getKey());
+                    if (player != null && player.isOnline()) {
+                        player.playSound(player.getLocation(), sound,
+                                (float) config.getVolume(),
+                                (float) config.getPitch());
+                    }
+                }
+            }
+        } catch (IllegalArgumentException e) {
+            plugin.getLogger().warning("無效的波次開始音效: " + config.getWaveStartSound());
+        }
+    }
+
+    /**
      * 检查当前波次的进度
      *
      * @param dungeonId   副本ID
@@ -384,6 +749,7 @@ public class WaveDungeonManager {
         // 检查所有实体是否还存在
         boolean allCleared = true;
         int remainingMobs = 0;
+        Set<UUID> aliveEntities = new HashSet<>(); // 用來儲存還活著的怪物UUID
 
         for (UUID entityId : entities) {
             boolean exists = false;
@@ -391,6 +757,7 @@ public class WaveDungeonManager {
                 for (Entity entity : world.getEntities()) {
                     if (entity.getUniqueId().equals(entityId)) {
                         exists = true;
+                        aliveEntities.add(entityId); // 添加到還活著的集合中
                         remainingMobs++;
                         break;
                     }
@@ -402,10 +769,19 @@ public class WaveDungeonManager {
             }
         }
 
+        // 更新實體集合，移除已經死亡的怪物
+        waveEntities.put(dungeonId, aliveEntities);
+
         // 如果所有怪物都被清理
         if (allCleared && !entities.isEmpty()) {
             int currentWave = waveDungeon.getCurrentWave();
             broadcastToDungeon(dungeonId, "§a第 " + currentWave + " 波怪物已全部擊殺！");
+
+            // 播放波次完成音效
+            playWaveClearSound(dungeonId);
+
+            // 清理強制倒數任務（因為正常完成了這一波）
+            cleanupForceNextWaveCountdown(dungeonId);
 
             waveCleared.put(dungeonId, true);
 
@@ -416,9 +792,21 @@ public class WaveDungeonManager {
                 // 最后一波已清理，标记完成
                 completeDungeon(dungeonId);
             }
-        } else if (remainingMobs > 0 && remainingMobs <= 5) {
-            // 当剩余怪物较少时，通知玩家
-            broadcastToDungeon(dungeonId, "§e還剩 " + remainingMobs + " 隻怪物！");
+        } else if (remainingMobs > 0) {
+            // 根據剩餘怪物數量調整通知頻率和內容
+            if (remainingMobs <= 5) {
+                // 當剩余怪物較少時，每次都通知玩家
+                broadcastToDungeon(dungeonId, "§e還剩 " + remainingMobs + " 隻怪物！");
+            } else if (remainingMobs <= 10 && remainingMobs % 2 == 0) {
+                // 10隻以內，每2隻通知一次
+                broadcastToDungeon(dungeonId, "§e還剩 " + remainingMobs + " 隻怪物！");
+            } else if (remainingMobs <= 20 && remainingMobs % 5 == 0) {
+                // 20隻以內，每5隻通知一次
+                broadcastToDungeon(dungeonId, "§e還剩 " + remainingMobs + " 隻怪物！");
+            } else if (remainingMobs % 10 == 0) {
+                // 20隻以上，每10隻通知一次
+                broadcastToDungeon(dungeonId, "§e還剩 " + remainingMobs + " 隻怪物！");
+            }
         }
     }
 
@@ -437,22 +825,27 @@ public class WaveDungeonManager {
             countdownTask.cancel();
             countdownTasks.remove(dungeonId);
         }
-
-        broadcastToDungeon(dungeonId, "§a§l恭喜你们！成功通過副本！5秒後自動返回主大廳");
-
-        // 这里可以添加奖励发放逻辑
-        // 例如：为每个玩家发放奖励道具、经验或金币
         for (Map.Entry<UUID, String> entry : dungeonManager.getPlayerDungeons().entrySet()) {
             if (dungeonId.equals(entry.getValue())) {
                 Player player = Bukkit.getPlayer(entry.getKey());
                 if (player != null && player.isOnline()) {
-                    // 发放奖励示例：这里仅作为示例，您可以替换为实际的奖励逻辑
-                    // player.giveExp(1000);
-                    // 向玩家发送特殊效果
-                    player.playSound(player.getLocation(), Sound.ENTITY_PLAYER_LEVELUP, 1.0f, 1.0f);
+                    // 記錄此玩家攻略此副本
+                    plugin.getRankingManager().recordCompletion(player, dungeonId);
+                    plugin.getLogger().info("記錄玩家 " + player.getName() + " 完成副本 " + dungeonId);
                 }
             }
         }
+        broadcastToDungeon(dungeonId, "§a§l恭喜你们！成功通過副本！5秒後自動返回主大廳");
+
+        // 新增：播放副本完成音效（替換原有的硬編碼音效）
+        playDungeonCompleteSound(dungeonId);
+        if (plugin.getDamageTracker().hasDungeonStats(dungeonId)) {
+            List<PlayerRanking> rankings = plugin.getDamageTracker().generateRankings(dungeonId);
+            displayRankingsToPlayers(dungeonId, rankings);
+        }
+
+        // 这里可以添加奖励发放逻辑
+        // 例如：为每个玩家发放奖励道具、经验或金币
 
         // 5秒后结束副本
         new BukkitRunnable() {
@@ -462,7 +855,46 @@ public class WaveDungeonManager {
             }
         }.runTaskLater(plugin, 100L); // 5秒 = 100 ticks
     }
+    /**
+     * 顯示排名給副本中的玩家
+     */
+    private void displayRankingsToPlayers(String dungeonId, List<PlayerRanking> rankings) {
+        if (rankings.isEmpty()) {
+            return;
+        }
 
+        broadcastToDungeon(dungeonId, "");
+        broadcastToDungeon(dungeonId, "§6§l=== 副本戰鬥統計 ===");
+
+        for (int i = 0; i < rankings.size(); i++) {
+            PlayerRanking ranking = rankings.get(i);
+
+            // 根據排名設置顏色
+            String rankColor = i == 0 ? "§e" : i == 1 ? "§7" : i == 2 ? "§6" : "§f";
+            String medal = i == 0 ? "🏆" : i == 1 ? "🥈" : i == 2 ? "🥉" : "";
+
+            broadcastToDungeon(dungeonId, String.format(
+                    "%s第%d名 %s: %s",
+                    rankColor, i + 1, medal, ranking.getPlayerName()
+            ));
+
+            broadcastToDungeon(dungeonId, String.format(
+                    "%s  傷害: §c%.1f §7| 擊殺: §a%d §7| 死亡: §c%d §7| DPS: §e%.1f",
+                    rankColor,
+                    ranking.getTotalDamage(),
+                    ranking.getKills(),
+                    ranking.getDeaths(),
+                    ranking.getDPS()
+            ));
+
+            if (i < rankings.size() - 1) {
+                broadcastToDungeon(dungeonId, "");
+            }
+        }
+
+        broadcastToDungeon(dungeonId, "§6§l==================");
+        broadcastToDungeon(dungeonId, "");
+    }
     /**
      * 清理副本并让所有玩家离开
      *

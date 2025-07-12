@@ -64,6 +64,22 @@
             <name>Lumine Releases</name>
             <url>https://mvn.lumine.io/repository/maven-public/</url>
         </repository>
+        <repository>
+            <id>jitpack</id>
+            <url>https://jitpack.io/</url>
+        </repository>
+        <repository>
+            <id>codemc</id>
+            <url>https://repo.codemc.io/repository/maven-public/</url>
+        </repository>
+        <repository>
+            <id>placeholderapi</id>
+            <url>https://repo.extendedclip.com/releases/</url>
+        </repository>
+        <repository>
+            <id>phoenix</id>
+            <url>https://nexus.phoenixdevt.fr/repository/maven-public/</url>
+        </repository>
 
     </repositories>
 
@@ -80,7 +96,32 @@
             <version>5.6.1</version>
             <scope>provided</scope>
         </dependency>
+        <dependency>
+            <groupId>com.github.decentsoftware-eu</groupId>
+            <artifactId>decentholograms</artifactId>
+            <version>2.8.17</version>
+            <scope>provided</scope>
+        </dependency>
+        <dependency>
+            <groupId>me.clip</groupId>
+            <artifactId>placeholderapi</artifactId>
+            <version>2.11.6</version>
+            <scope>provided</scope>
+        </dependency>
+        <dependency>
+            <groupId>io.lumine</groupId>
+            <artifactId>MythicLib-dist</artifactId>
+            <version>1.6.2-SNAPSHOT</version>
+            <scope>provided</scope>
+            <optional>true</optional>
+        </dependency>
 
+        <dependency>
+            <groupId>net.Indyuce</groupId>
+            <artifactId>MMOCore-API</artifactId>
+            <version>1.12.1-SNAPSHOT</version>
+            <scope>provided</scope>
+        </dependency>
 
     </dependencies>
 </project>

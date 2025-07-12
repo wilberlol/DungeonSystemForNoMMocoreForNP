@@ -150,6 +150,12 @@ public class PartyCommand implements CommandExecutor, TabCompleter {
             return;
         }
 
+        // 檢查隊伍是否已滿
+        if (party.isFull()) {
+            player.sendMessage("§c隊伍已滿，無法邀請更多玩家");
+            return;
+        }
+
         // 發送邀請
         pendingInvites.put(target.getUniqueId(), player.getUniqueId());
         player.sendMessage("§a已發送隊伍邀請給 " + target.getName());
@@ -215,7 +221,7 @@ public class PartyCommand implements CommandExecutor, TabCompleter {
         }
 
         // 檢查隊伍人數是否已滿
-        if (party.getSize() >= 5) { // 假設最大隊伍人數為5
+        if (party.isFull()) {
             player.sendMessage("§c隊伍已滿，無法加入");
             inviter.sendMessage("§c" + player.getName() + " 無法加入你的隊伍，因為隊伍已滿");
             return;
@@ -313,18 +319,25 @@ public class PartyCommand implements CommandExecutor, TabCompleter {
         Player target = null;
         UUID targetId = null;
 
-        // 先嘗試在線玩家
-        target = Bukkit.getPlayer(targetName);
-        if (target != null) {
-            targetId = target.getUniqueId();
-        } else {
-            // 如果不在線，尋找隊伍中匹配的玩家名稱
-            for (UUID memberId : party.getMemberUUIDs()) {
-                Player member = Bukkit.getPlayer(memberId);
-                if (member != null && member.getName().equalsIgnoreCase(targetName)) {
-                    target = member;
-                    targetId = memberId;
-                    break;
+        // 先在隊伍成員中查找匹配的玩家名稱
+        for (UUID memberId : party.getMemberUUIDs()) {
+            String memberName = party.getMembers().get(memberId);
+            if (memberName != null && memberName.equalsIgnoreCase(targetName)) {
+                targetId = memberId;
+                target = Bukkit.getPlayer(memberId);
+                break;
+            }
+        }
+
+        // 如果在隊伍成員中找不到，嘗試在線玩家
+        if (targetId == null) {
+            target = Bukkit.getPlayer(targetName);
+            if (target != null) {
+                targetId = target.getUniqueId();
+                // 確認該玩家確實在這個隊伍中
+                if (!party.getMemberUUIDs().contains(targetId)) {
+                    target = null;
+                    targetId = null;
                 }
             }
         }
@@ -334,31 +347,31 @@ public class PartyCommand implements CommandExecutor, TabCompleter {
             return;
         }
 
-        // 檢查目標是否在隊伍中
-        if (partyManager.getPlayerParty(targetId) != party) {
-            player.sendMessage("§c該玩家不在你的隊伍中");
-            return;
-        }
-
         // 不能踢自己
         if (targetId.equals(player.getUniqueId())) {
             player.sendMessage("§c你不能踢出自己，請使用 /party leave 離開隊伍");
             return;
         }
 
-        // 踢出玩家
-        party.removeMember(targetId);
-        if (target != null && target.isOnline()) {
-            partyManager.removePlayerFromParty(targetId);
-            target.sendMessage("§c你被踢出了隊伍");
-        }
+        // 使用 PartyManager 的 kickPlayer 方法
+        boolean success = partyManager.kickPlayer(player.getUniqueId(), targetId);
 
-        // 通知所有隊員
-        for (UUID memberId : party.getMemberUUIDs()) {
-            Player member = Bukkit.getPlayer(memberId);
-            if (member != null && member.isOnline()) {
-                member.sendMessage("§c" + targetName + " 被踢出了隊伍");
+        if (success) {
+            // 通知被踢的玩家
+            if (target != null && target.isOnline()) {
+                target.sendMessage("§c你被踢出了隊伍");
             }
+
+            // 通知所有隊員
+            String kickedPlayerName = target != null ? target.getName() : party.getMembers().get(targetId);
+            for (UUID memberId : party.getMemberUUIDs()) {
+                Player member = Bukkit.getPlayer(memberId);
+                if (member != null && member.isOnline()) {
+                    member.sendMessage("§c" + kickedPlayerName + " 被踢出了隊伍");
+                }
+            }
+        } else {
+            player.sendMessage("§c踢出玩家失敗");
         }
     }
 
@@ -372,16 +385,16 @@ public class PartyCommand implements CommandExecutor, TabCompleter {
 
         // 獲取隊長信息
         UUID ownerId = party.getOwnerId();
-        String ownerName = "未知";
-        Player owner = Bukkit.getPlayer(ownerId);
-        if (owner != null) {
-            ownerName = owner.getName();
+        String ownerName = party.getMembers().get(ownerId);
+        if (ownerName == null) {
+            Player owner = Bukkit.getPlayer(ownerId);
+            ownerName = owner != null ? owner.getName() : "未知";
         }
 
         // 顯示隊伍基本信息
         player.sendMessage("§6========== §e隊伍信息 §6==========");
         player.sendMessage("§a隊長: §f" + ownerName);
-        player.sendMessage("§a成員數量: §f" + party.getSize());
+        player.sendMessage("§a成員數量: §f" + party.getSize() + "/" + party.getMaxSize());
         player.sendMessage("§a成員列表:");
 
         // 首先顯示隊長
@@ -390,9 +403,16 @@ public class PartyCommand implements CommandExecutor, TabCompleter {
         // 然後顯示其他成員
         for (UUID memberId : party.getMemberUUIDs()) {
             if (!memberId.equals(ownerId)) { // 排除隊長，因為已經顯示過了
+                String memberName = party.getMembers().get(memberId);
+                if (memberName == null) {
+                    Player member = Bukkit.getPlayer(memberId);
+                    memberName = member != null ? member.getName() : "未知玩家";
+                }
+
+                // 檢查玩家是否在線
                 Player member = Bukkit.getPlayer(memberId);
-                String memberName = member != null ? member.getName() : "離線玩家";
-                player.sendMessage("  §f" + memberName);
+                String status = (member != null && member.isOnline()) ? "§a[在線]" : "§7[離線]";
+                player.sendMessage("  " + status + " §f" + memberName);
             }
         }
     }
@@ -419,7 +439,6 @@ public class PartyCommand implements CommandExecutor, TabCompleter {
 
     private void cleanupInvites() {
         // 清理過期的邀請
-        long currentTime = System.currentTimeMillis();
         pendingInvites.entrySet().removeIf(entry -> {
             UUID targetId = entry.getKey();
             UUID inviterId = entry.getValue();
@@ -438,6 +457,7 @@ public class PartyCommand implements CommandExecutor, TabCompleter {
         Player player = (Player) sender;
 
         if (args.length == 1) {
+            // 第一個參數：提供所有可用的子指令
             List<String> completions = Arrays.asList("create", "invite", "accept", "decline", "leave", "kick", "info", "chat");
             return completions.stream()
                     .filter(s -> s.startsWith(args[0].toLowerCase()))
@@ -445,30 +465,45 @@ public class PartyCommand implements CommandExecutor, TabCompleter {
         }
 
         if (args.length == 2) {
-            if (args[0].equalsIgnoreCase("invite")) {
-                // 提供所有在線玩家的名稱，除了自己和已經在隊伍中的人
-                return Bukkit.getOnlinePlayers().stream()
-                        .filter(p -> !p.equals(player) && partyManager.getPlayerParty(p.getUniqueId()) == null)
-                        .map(Player::getName)
-                        .filter(name -> name.toLowerCase().startsWith(args[1].toLowerCase()))
-                        .collect(Collectors.toList());
-            }
+            String subCommand = args[0].toLowerCase();
 
-            if (args[0].equalsIgnoreCase("kick")) {
-                // 提供隊伍中的玩家名稱
-                Party party = partyManager.getPlayerParty(player.getUniqueId());
-                if (party != null && party.isOwner(player.getUniqueId())) {
-                    return party.getMemberUUIDs().stream()
-                            .filter(uuid -> !uuid.equals(player.getUniqueId()))
-                            .map(Bukkit::getPlayer)
-                            .filter(Objects::nonNull)
+            switch (subCommand) {
+                case "invite":
+                    // 提供所有在線玩家的名稱，除了自己和已經在隊伍中的人
+                    return Bukkit.getOnlinePlayers().stream()
+                            .filter(p -> !p.equals(player)) // 不包括自己
+                            .filter(p -> partyManager.getPlayerParty(p.getUniqueId()) == null) // 不包括已在隊伍中的人
+                            .filter(p -> !pendingInvites.containsKey(p.getUniqueId())) // 不包括已有待處理邀請的人
                             .map(Player::getName)
                             .filter(name -> name.toLowerCase().startsWith(args[1].toLowerCase()))
+                            .sorted()
                             .collect(Collectors.toList());
-                }
+
+                case "kick":
+                    // 提供隊伍中的玩家名稱（除了自己）
+                    Party party = partyManager.getPlayerParty(player.getUniqueId());
+                    if (party != null && party.isOwner(player.getUniqueId())) {
+                        return party.getMemberUUIDs().stream()
+                                .filter(uuid -> !uuid.equals(player.getUniqueId())) // 不包括自己
+                                .map(uuid -> {
+                                    // 優先使用緩存的名稱，如果沒有則嘗試獲取在線玩家名稱
+                                    String name = party.getMembers().get(uuid);
+                                    if (name == null) {
+                                        Player member = Bukkit.getPlayer(uuid);
+                                        name = member != null ? member.getName() : null;
+                                    }
+                                    return name;
+                                })
+                                .filter(Objects::nonNull) // 過濾掉null值
+                                .filter(name -> name.toLowerCase().startsWith(args[1].toLowerCase()))
+                                .sorted()
+                                .collect(Collectors.toList());
+                    }
+                    break;
             }
         }
 
+        // 對於其他情況或不匹配的參數，返回空列表
         return Collections.emptyList();
     }
 }
