@@ -3,10 +3,7 @@ package me.ninepin.dungeonSystem;
 import me.ninepin.dungeonSystem.Dungeon.*;
 import me.ninepin.dungeonSystem.damage.DamageTracker;
 import me.ninepin.dungeonSystem.key.KeyManager;
-import me.ninepin.dungeonSystem.party.IPartySystem;
-import me.ninepin.dungeonSystem.party.MMOCorePartyAdapter;
-import me.ninepin.dungeonSystem.party.PartyCommand;
-import me.ninepin.dungeonSystem.party.PartyManager;
+import me.ninepin.dungeonSystem.party.*;
 import me.ninepin.dungeonSystem.ranking.DungeonRankingManager;
 import me.ninepin.dungeonSystem.ranking.DungeonRankingPlaceholder;
 import me.ninepin.dungeonSystem.ranking.RankingHologramManager;
@@ -14,7 +11,9 @@ import me.ninepin.dungeonSystem.revive.ReviveItemManager;
 import me.ninepin.dungeonSystem.revive.ReviveListener;
 import org.bukkit.Bukkit;
 import org.bukkit.plugin.java.JavaPlugin;
-import me.ninepin.dungeonSystem.party.PartyListener;
+
+import java.util.ArrayList;
+import java.util.List;
 
 public class DungeonSystem extends JavaPlugin {
 
@@ -103,9 +102,11 @@ public class DungeonSystem extends JavaPlugin {
 
         getLogger().info("DungeonSystem enabled successfully!");
     }
+
     public IPartySystem getPartySystem() {
         return partySystem;
     }
+
     // 修改檢查方法
     public boolean isCustomPartySystem() {
         return getConfig().getString("party.system-type", "custom").equalsIgnoreCase("custom");
@@ -271,6 +272,25 @@ public class DungeonSystem extends JavaPlugin {
         // 通知 WaveDungeonManager 配置已重載
         if (waveDungeonManager != null) {
             getLogger().info("波次副本音效配置已重載");
+        }
+        // 重新載入排行榜數據
+        if (rankingManager != null) {
+            rankingManager.reload();
+            // 清除全息圖快取
+            if (hologramManager != null) {
+                hologramManager.clearAllCache();
+            }
+
+        }
+        List<String> updatedDungeons = new ArrayList<>();
+
+        for (String dungeonId : dungeonManager.getAllDungeons().keySet()) {
+            if (hologramManager.hasPermanentRanking(dungeonId)) {
+                hologramManager.updatePermanentRanking(dungeonId);
+                Dungeon dungeon = dungeonManager.getDungeon(dungeonId);
+                String displayName = dungeon != null ? dungeon.getDisplayName() : dungeonId;
+                updatedDungeons.add(displayName);
+            }
         }
     }
 

@@ -421,7 +421,14 @@ public class RankingHologramManager {
 
         return null;
     }
-
+    /**
+     * 清除所有快取
+     */
+    public void clearAllCache() {
+        cacheTimestamps.clear();
+        rankingCache.clear();
+        plugin.getLogger().info("已清除所有排行榜快取");
+    }
     /**
      * 創建永久排行榜hologram
      */

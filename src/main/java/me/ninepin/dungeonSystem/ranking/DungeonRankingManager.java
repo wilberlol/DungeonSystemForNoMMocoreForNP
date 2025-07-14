@@ -30,6 +30,13 @@ public class DungeonRankingManager {
     }
 
     /**
+     * 重新載入排行榜數據
+     */
+    public void reload() {
+        dataManager.reload();
+    }
+
+    /**
      * 獲取副本排行榜
      */
     public List<me.ninepin.dungeonSystem.ranking.JsonDataManager.PlayerRankingData> getDungeonRanking(String dungeonId, int limit) {

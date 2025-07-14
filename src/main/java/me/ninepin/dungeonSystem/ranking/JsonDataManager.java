@@ -7,7 +7,10 @@ import me.ninepin.dungeonSystem.DungeonSystem;
 
 import java.io.*;
 import java.lang.reflect.Type;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
+import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 
 public class JsonDataManager {
@@ -149,6 +152,15 @@ public class JsonDataManager {
         }
 
         return null;
+    }
+
+    /**
+     * 重新載入排行榜數據
+     */
+    public void reload() {
+        dungeonRankings.clear();
+        loadData();
+        plugin.getLogger().info("已重新載入排行榜數據 (rankings.json)");
     }
 
     /**
