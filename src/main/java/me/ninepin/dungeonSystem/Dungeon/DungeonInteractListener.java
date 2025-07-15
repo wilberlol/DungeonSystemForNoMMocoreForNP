@@ -3,6 +3,7 @@ package me.ninepin.dungeonSystem.Dungeon;
 import me.ninepin.dungeonSystem.DungeonSystem;
 import me.ninepin.dungeonSystem.key.KeyManager;
 import me.ninepin.dungeonSystem.party.IPartySystem;
+import me.ninepin.dungeonSystem.utils.MessageUtil;
 import org.bukkit.Bukkit;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
@@ -165,9 +166,11 @@ public class DungeonInteractListener implements Listener {
             // 根據副本類型顯示不同的訊息
             if (dungeon instanceof WaveDungeon) {
                 WaveDungeon waveDungeon = (WaveDungeon) dungeon;
-                player.sendMessage("§b你已使用波次副本入場券進入 §e" + dungeon.getDisplayName() + " §b(共 " + waveDungeon.getTotalWaves() + " 波)");
+                MessageUtil.sendMessage(player,
+                        "§b你已使用波次副本入場券進入 §e" + dungeon.getDisplayName() + " §b(共 " + waveDungeon.getTotalWaves() + " 波)");
             } else {
-                player.sendMessage("§b你已使用副本入場券進入 §e" + dungeon.getDisplayName());
+                MessageUtil.sendMessage(player,
+                        "§b你已使用副本入場券進入 §e" + dungeon.getDisplayName());
             }
         }
     }

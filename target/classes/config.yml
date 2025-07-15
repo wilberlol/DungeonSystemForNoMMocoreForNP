@@ -63,7 +63,7 @@ dungeons:
     type: "wave"
     level-required: 10
     max-players: 5
-    display-name: §2§l《囈語之森》
+    display-name: "<gradient:#green:#blue>§2§l《囈語之森》</gradient> <#ff0000>❤</#ff0000>"
     spawn-point: "world,200,64,200,0,0"
     death-waiting-area: "world,210,64,210,0,0"
     target-mob: "boss_dragon"  # 最终Boss (如果有的话)

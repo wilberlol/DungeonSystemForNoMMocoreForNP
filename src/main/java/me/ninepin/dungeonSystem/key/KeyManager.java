@@ -3,6 +3,8 @@ package me.ninepin.dungeonSystem.key;
 import me.ninepin.dungeonSystem.Dungeon.Dungeon;
 import me.ninepin.dungeonSystem.Dungeon.WaveDungeon;
 import me.ninepin.dungeonSystem.DungeonSystem;
+import me.ninepin.dungeonSystem.utils.MessageUtil;
+import net.kyori.adventure.text.Component;
 import org.bukkit.Material;
 import org.bukkit.NamespacedKey;
 import org.bukkit.Sound;
@@ -313,9 +315,14 @@ public class KeyManager {
                     lore = newLore;
                 }
             }
+            Component nameComponent = MessageUtil.parseMessage(name);
+            meta.displayName(nameComponent);
 
-            meta.setDisplayName(name);
-            meta.setLore(lore);
+            List<Component> loreComponents = new ArrayList<>();
+            for (String loreLine : lore) {
+                loreComponents.add(MessageUtil.parseMessage(loreLine));
+            }
+            meta.lore(loreComponents);
 
             // 獲取並設置 custom_model_data
             int customModelData = keyConfig.getInt("keys." + baseId + ".custom_model_data", 0);
@@ -352,7 +359,12 @@ public class KeyManager {
 
         keyItem.setAmount(amount);
         player.getInventory().addItem(keyItem);
-        player.sendMessage("§a你獲得了 §e" + amount + "個 " + keyItem.getItemMeta().getDisplayName());
+        Component displayName = keyItem.getItemMeta().displayName();
+        String displayNameText = displayName != null ?
+                net.kyori.adventure.text.serializer.plain.PlainTextComponentSerializer.plainText().serialize(displayName) :
+                "副本入場卷";
+        me.ninepin.dungeonSystem.utils.MessageUtil.sendMessage(player,
+                "§a你獲得了 §e" + amount + "個 " + displayNameText);
     }
 
     public boolean isDungeonKey(ItemStack item) {

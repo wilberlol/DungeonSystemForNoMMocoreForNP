@@ -243,11 +243,6 @@ public class DungeonSystem extends JavaPlugin {
 
         // 重新載入音效配置快取
         loadSoundConfig();
-
-        if (keyManager != null) {
-            keyManager.reload();
-        }
-
         // 檢查復活系統狀態
         boolean revivalEnabled = isRevivalSystemEnabled();
 
@@ -291,6 +286,10 @@ public class DungeonSystem extends JavaPlugin {
                 String displayName = dungeon != null ? dungeon.getDisplayName() : dungeonId;
                 updatedDungeons.add(displayName);
             }
+        }
+
+        if (keyManager != null) {
+            keyManager.reload();
         }
     }
 

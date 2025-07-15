@@ -2,6 +2,7 @@ package me.ninepin.dungeonSystem.ranking;
 
 import me.clip.placeholderapi.expansion.PlaceholderExpansion;
 import me.ninepin.dungeonSystem.DungeonSystem;
+import me.ninepin.dungeonSystem.utils.MessageUtil;
 import org.bukkit.entity.Player;
 import org.jetbrains.annotations.NotNull;
 
@@ -83,10 +84,12 @@ public class DungeonRankingPlaceholder extends PlaceholderExpansion {
 
             if (playerData != null) {
                 String rank = getPlayerRank(player, dungeonId);
-                return "§b" + player.getName() + " §7排名:§e#" + rank +
+                String infoText = "§b" + player.getName() + " §7排名:§e#" + rank +
                         " §7完成:§a" + playerData.completionCount + "次";
+                return MessageUtil.parseToLegacyString(infoText);
             } else {
-                return "§b" + player.getName() + " §7尚未攻略此副本";
+                String noRecordText = "§b" + player.getName() + " §7尚未攻略此副本";
+                return MessageUtil.parseToLegacyString(noRecordText);
             }
         } catch (Exception e) {
             plugin.getLogger().warning("獲取玩家資訊時出錯: " + e.getMessage());

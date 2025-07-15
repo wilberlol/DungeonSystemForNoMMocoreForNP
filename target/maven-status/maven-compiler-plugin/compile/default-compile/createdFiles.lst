@@ -19,6 +19,7 @@ me\ninepin\dungeonSystem\revive\ReviveListener.class
 me\ninepin\dungeonSystem\Dungeon\DungeonCommand.class
 me\ninepin\dungeonSystem\Dungeon\DungeonManager.class
 me\ninepin\dungeonSystem\Dungeon\WaveDungeonManager$4.class
+me\ninepin\dungeonSystem\utils\MessageUtil.class
 me\ninepin\dungeonSystem\Dungeon\DungeonListener.class
 me\ninepin\dungeonSystem\Dungeon\DungeonManager$2.class
 me\ninepin\dungeonSystem\ranking\JsonDataManager$PlayerRankingData.class

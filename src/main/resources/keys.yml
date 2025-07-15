@@ -3,10 +3,10 @@
 
 keys:
   dungeon1:
-    name: "§e副本1 入場卷"
+    name: "<gradient:#gold:#yellow>§e副本1 入場卷</gradient>"
     lore:
-      - "§7使用此卷進入副本1"
-      - "§7右鍵點擊使用"
+      - "<gray>使用此卷進入副本1"
+      - "<#ff5555>右鍵點擊使用 <rainbow>✨</rainbow>"
     material: "PAPER"
     custom_model_data: 1
     is_wave: false

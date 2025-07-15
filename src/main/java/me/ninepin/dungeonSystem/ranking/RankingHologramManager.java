@@ -4,6 +4,7 @@ import eu.decentsoftware.holograms.api.DHAPI;
 import eu.decentsoftware.holograms.api.holograms.Hologram;
 import me.ninepin.dungeonSystem.Dungeon.Dungeon;
 import me.ninepin.dungeonSystem.DungeonSystem;
+import me.ninepin.dungeonSystem.utils.MessageUtil;
 import org.bukkit.Location;
 import org.bukkit.entity.Player;
 import org.bukkit.scheduler.BukkitRunnable;
@@ -94,6 +95,7 @@ public class RankingHologramManager {
         }
 
     }
+
     private void createPermanentRankingWithNormalizedId(String normalizedDungeonId, Location location) {
         String hologramName = getPermanentHologramName(normalizedDungeonId);
 
@@ -122,6 +124,7 @@ public class RankingHologramManager {
             }
         }
     }
+
     // 更新所有可見的全息圖
     private void updateAllVisibleHolograms() {
         try {
@@ -154,6 +157,7 @@ public class RankingHologramManager {
             e.printStackTrace();
         }
     }
+
     /**
      * 使用標準化ID更新永久全息圖內容
      */
@@ -178,6 +182,7 @@ public class RankingHologramManager {
             e.printStackTrace();
         }
     }
+
     /**
      * 清除指定副本的緩存
      */
@@ -301,13 +306,12 @@ public class RankingHologramManager {
                                               List<JsonDataManager.PlayerRankingData> topPlayers,
                                               String dungeonId) {
         List<String> lines = new ArrayList<>();
-
-        // 標題
-        lines.add("§6§l" + displayName + " 排行");
+        String titleLine = "§6§l" + displayName + " 排行";
+        lines.add(MessageUtil.parseToLegacyString(titleLine));
 
         // 如果沒有記錄
         if (topPlayers.isEmpty()) {
-            lines.add("§7暫無記錄");
+            lines.add(MessageUtil.parseToLegacyString("§7暫無記錄"));
             // 使用個人化佔位符
             lines.add("%dungeonrank_" + dungeonId + "_info%");
             return lines;
@@ -339,12 +343,12 @@ public class RankingHologramManager {
                     break;
             }
 
-            // 顯示格式：顏色 + 排名 + 箭頭 + 玩家名稱 + 次數
-            lines.add(rankColor + rankText + " §f༻ " + rankColor + data.playerName + " §a" + data.completionCount + "次");
+            String rankLine = rankColor + rankText + " §f༻ " + rankColor + data.playerName + " §a" + data.completionCount + "次";
+            lines.add(MessageUtil.parseToLegacyString(rankLine));
         }
 
         // 添加分隔線
-        lines.add("§7§m───────");
+        lines.add(MessageUtil.parseToLegacyString("§7§m───────"));
 
         // 使用個人化佔位符
         lines.add("%dungeonrank_" + dungeonId + "_info%");
@@ -421,6 +425,7 @@ public class RankingHologramManager {
 
         return null;
     }
+
     /**
      * 清除所有快取
      */
@@ -429,6 +434,7 @@ public class RankingHologramManager {
         rankingCache.clear();
         plugin.getLogger().info("已清除所有排行榜快取");
     }
+
     /**
      * 創建永久排行榜hologram
      */

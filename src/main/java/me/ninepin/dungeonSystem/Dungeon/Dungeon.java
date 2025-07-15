@@ -1,5 +1,7 @@
 package me.ninepin.dungeonSystem.Dungeon;
 
+import me.ninepin.dungeonSystem.utils.MessageUtil;
+import net.kyori.adventure.text.Component;
 import org.bukkit.Location;
 
 import java.util.List;
@@ -53,7 +55,13 @@ public class Dungeon {
     public String getDisplayName() {
         return displayName != null ? displayName : id;
     }
-
+    /**
+     * 獲取解析後的顯示名稱 Component（支援 MiniMessage）
+     */
+    public Component getDisplayNameComponent() {
+        String name = getDisplayName();
+        return MessageUtil.parseMessage(name);
+    }
     public Location getDeathWaitingArea() {
         return deathWaitingArea;
     }
