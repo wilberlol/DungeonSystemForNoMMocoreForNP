@@ -1,0 +1,10 @@
+# 永久全息圖配置檔案
+# 此檔案會自動管理，請勿手動編輯
+
+permanent_holograms:
+# 格式範例：
+# dungeon_name:
+#   world: world
+#   x: 100.0
+#   y: 64.0
+#   z: -200.0
