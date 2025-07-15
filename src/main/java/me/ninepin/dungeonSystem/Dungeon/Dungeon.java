@@ -62,6 +62,10 @@ public class Dungeon {
         String name = getDisplayName();
         return MessageUtil.parseMessage(name);
     }
+    public String getParsedDisplayName() {
+        String name = getDisplayName();
+        return MessageUtil.parseToLegacyString(name);
+    }
     public Location getDeathWaitingArea() {
         return deathWaitingArea;
     }

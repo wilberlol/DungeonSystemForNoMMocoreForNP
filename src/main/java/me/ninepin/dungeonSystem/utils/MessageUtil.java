@@ -18,8 +18,9 @@ public class MessageUtil {
     public static Component parseMessage(String message) {
         try {
             // 如果包含 MiniMessage 標記，使用 MiniMessage 解析
-            if (message.contains("<") && message.contains(">")) {
-                // 先將 § 符號轉換為 MiniMessage 格式，然後解析整個訊息
+            if (message.matches(".*<[a-zA-Z_#][a-zA-Z0-9_:#]*>.*") ||
+                    message.matches(".*</[a-zA-Z_][a-zA-Z0-9_]*>.*")) {
+                // 包含有效的 MiniMessage 標記
                 String convertedMessage = convertLegacyToMiniMessage(message);
                 return miniMessage.deserialize(convertedMessage);
             } else {
@@ -36,6 +37,12 @@ public class MessageUtil {
      * 將 § 符號轉換為 MiniMessage 格式（用於混合使用時）
      */
     private static String convertLegacyToMiniMessage(String message) {
+        // 先檢查是否已經包含 MiniMessage 標記，如果有則不進行 § 符號轉換
+        if (message.matches(".*<[a-zA-Z_#][a-zA-Z0-9_:#]*>.*")) {
+            return message; // 已經是 MiniMessage 格式，直接返回
+        }
+
+        // 只轉換 § 符號
         return message
                 .replace("§0", "<black>")
                 .replace("§1", "<dark_blue>")

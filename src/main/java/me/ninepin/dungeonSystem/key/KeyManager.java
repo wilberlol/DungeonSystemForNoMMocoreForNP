@@ -361,7 +361,7 @@ public class KeyManager {
         player.getInventory().addItem(keyItem);
         Component displayName = keyItem.getItemMeta().displayName();
         String displayNameText = displayName != null ?
-                net.kyori.adventure.text.serializer.plain.PlainTextComponentSerializer.plainText().serialize(displayName) :
+                net.kyori.adventure.text.serializer.legacy.LegacyComponentSerializer.legacySection().serialize(displayName) :
                 "副本入場卷";
         me.ninepin.dungeonSystem.utils.MessageUtil.sendMessage(player,
                 "§a你獲得了 §e" + amount + "個 " + displayNameText);
