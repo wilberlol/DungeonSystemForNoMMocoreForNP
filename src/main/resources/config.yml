@@ -6,6 +6,7 @@ key-settings:
 settings:
   exit-point: "world,0,64,0,0,0"
   revival-system-enabled: true
+  debug: false
 ranking:
   hologram-update-interval: 5 # 自動更新間隔（秒）
 # 組隊系統設定
@@ -63,7 +64,7 @@ dungeons:
     type: "wave"
     level-required: 10
     max-players: 5
-    display-name: "<gradient:#green:#blue>§2§l《囈語之森》</gradient> <#ff0000>❤</#ff0000>"
+    display-name: "<green>hello world</green><#ff0000>❤</#ff0000>"
     spawn-point: "world,200,64,200,0,0"
     death-waiting-area: "world,210,64,210,0,0"
     target-mob: "boss_dragon"  # 最终Boss (如果有的话)

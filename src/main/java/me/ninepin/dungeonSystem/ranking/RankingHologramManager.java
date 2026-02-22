@@ -239,7 +239,7 @@ public class RankingHologramManager {
 
             // 構建全息圖內容
             List<String> lines = buildCompactHologram(displayName, topPlayers, normalizedDungeonId);
-            lines.add("§7§o(30秒後消失)");
+            lines.add(MessageUtil.parseToLegacyString("<gray><italic>(30秒後消失)</italic></gray>"));
 
             // 更新hologram
             DHAPI.setHologramLines(hologram, lines);
@@ -287,12 +287,14 @@ public class RankingHologramManager {
                                               List<JsonDataManager.PlayerRankingData> topPlayers,
                                               String dungeonId) {
         List<String> lines = new ArrayList<>();
-        String titleLine = MessageUtil.parseToLegacyString("<gold><bold>" + displayName + " 排行</bold></gold>");
+        // 剝除 displayName 中可能混入的 legacy § 色碼，保留 MiniMessage tag
+        String sanitizedDisplayName = displayName.replaceAll("§[0-9a-fk-orx]", "");
+        String titleLine = MessageUtil.parseToLegacyString("<gold><bold>" + sanitizedDisplayName + " 排行</bold></gold>");
         lines.add(titleLine);
 
         // 如果沒有記錄
         if (topPlayers.isEmpty()) {
-            lines.add(MessageUtil.parseToLegacyString("§7暫無記錄"));
+            lines.add(MessageUtil.parseToLegacyString("<gray>暫無記錄</gray>"));
             // 使用個人化佔位符
             lines.add("%dungeonrank_" + dungeonId + "_info%");
             return lines;
@@ -308,28 +310,28 @@ public class RankingHologramManager {
             switch (i) {
                 case 0:
                     rankText = "第一名";
-                    rankColor = "§6"; // 金色
+                    rankColor = "gold";
                     break;
                 case 1:
                     rankText = "第二名";
-                    rankColor = "§d"; // 淺紫色
+                    rankColor = "light_purple";
                     break;
                 case 2:
                     rankText = "第三名";
-                    rankColor = "§9"; // 藍色
+                    rankColor = "blue";
                     break;
                 default:
                     rankText = "第" + (i + 1) + "名";
-                    rankColor = "§7"; // 灰色
+                    rankColor = "gray";
                     break;
             }
 
-            String rankLine = rankColor + rankText + " §f༻ " + rankColor + data.playerName + " §a" + data.completionCount + "次";
+            String rankLine = "<" + rankColor + ">" + rankText + "</" + rankColor + "> <white>༻</white> <" + rankColor + ">" + data.playerName + "</" + rankColor + "> <green>" + data.completionCount + "次</green>";
             lines.add(MessageUtil.parseToLegacyString(rankLine));
         }
 
         // 添加分隔線
-        lines.add(MessageUtil.parseToLegacyString("§7§m───────"));
+        lines.add(MessageUtil.parseToLegacyString("<gray><strikethrough>───────</strikethrough></gray>"));
 
         // 使用個人化佔位符
         lines.add("%dungeonrank_" + dungeonId + "_info%");

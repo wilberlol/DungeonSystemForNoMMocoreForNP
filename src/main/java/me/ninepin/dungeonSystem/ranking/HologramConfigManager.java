@@ -101,7 +101,9 @@ public class HologramConfigManager {
         ConfigurationSection section = config.getConfigurationSection("permanent_holograms");
 
         if (section != null) {
-            plugin.getLogger().info("載入全息圖配置，找到 " + section.getKeys(false).size() + " 個配置項目");
+            if (plugin.getConfig().getBoolean("settings.debug", false)) {
+                plugin.getLogger().info("載入全息圖配置，找到 " + section.getKeys(false).size() + " 個配置項目");
+            }
 
             for (String dungeonId : section.getKeys(false)) {
                 String worldName = section.getString(dungeonId + ".world");
