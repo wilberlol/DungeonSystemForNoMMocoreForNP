@@ -3,6 +3,7 @@ package me.ninepin.dungeonSystem.Dungeon;
 import io.lumine.mythic.bukkit.MythicBukkit;
 import io.lumine.mythic.core.mobs.ActiveMob;
 import me.ninepin.dungeonSystem.DungeonSystem;
+import me.ninepin.dungeonSystem.utils.MessageUtil;
 import me.ninepin.dungeonSystem.damage.PlayerRanking;
 import org.bukkit.Bukkit;
 import org.bukkit.Location;
@@ -973,7 +974,7 @@ public class WaveDungeonManager {
             if (dungeonId.equals(entry.getValue())) {
                 Player player = Bukkit.getPlayer(entry.getKey());
                 if (player != null && player.isOnline()) {
-                    player.sendMessage(message);
+                    MessageUtil.sendMessage(player, message);
                 }
             }
         }

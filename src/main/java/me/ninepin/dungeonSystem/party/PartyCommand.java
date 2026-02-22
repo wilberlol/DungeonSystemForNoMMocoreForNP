@@ -1,11 +1,9 @@
 package me.ninepin.dungeonSystem.party;
 
 import me.ninepin.dungeonSystem.DungeonSystem;
-import net.md_5.bungee.api.ChatColor;
-import net.md_5.bungee.api.chat.ClickEvent;
-import net.md_5.bungee.api.chat.ComponentBuilder;
-import net.md_5.bungee.api.chat.HoverEvent;
-import net.md_5.bungee.api.chat.TextComponent;
+import me.ninepin.dungeonSystem.utils.MessageUtil;
+import net.kyori.adventure.text.Component;
+import net.kyori.adventure.text.minimessage.MiniMessage;
 import org.bukkit.Bukkit;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandExecutor;
@@ -51,7 +49,7 @@ public class PartyCommand implements CommandExecutor, TabCompleter {
                 break;
             case "invite":
                 if (args.length < 2) {
-                    player.sendMessage("§c用法: /party invite <玩家名稱>");
+                    MessageUtil.sendMessage(player, "§c用法: /party invite <玩家名稱>");
                     return true;
                 }
                 handleInviteCommand(player, args[1]);
@@ -67,7 +65,7 @@ public class PartyCommand implements CommandExecutor, TabCompleter {
                 break;
             case "kick":
                 if (args.length < 2) {
-                    player.sendMessage("§c用法: /party kick <玩家名稱>");
+                    MessageUtil.sendMessage(player, "§c用法: /party kick <玩家名稱>");
                     return true;
                 }
                 handleKickCommand(player, args[1]);
@@ -78,7 +76,7 @@ public class PartyCommand implements CommandExecutor, TabCompleter {
             case "chat":
             case "c":
                 if (args.length < 2) {
-                    player.sendMessage("§c用法: /party chat <訊息>");
+                    MessageUtil.sendMessage(player, "§c用法: /party chat <訊息>");
                     return true;
                 }
                 handleChatCommand(player, String.join(" ", Arrays.copyOfRange(args, 1, args.length)));
@@ -92,40 +90,40 @@ public class PartyCommand implements CommandExecutor, TabCompleter {
     }
 
     private void sendHelpMessage(Player player) {
-        player.sendMessage("§6========== §e隊伍系統指令 §6==========");
-        player.sendMessage("§e/party create §7- 創建新隊伍");
-        player.sendMessage("§e/party invite <玩家> §7- 邀請玩家加入隊伍");
-        player.sendMessage("§e/party accept §7- 接受隊伍邀請");
-        player.sendMessage("§e/party decline §7- 拒絕隊伍邀請");
-        player.sendMessage("§e/party leave §7- 離開當前隊伍");
-        player.sendMessage("§e/party kick <玩家> §7- 將玩家踢出隊伍");
-        player.sendMessage("§e/party info §7- 顯示隊伍信息");
-        player.sendMessage("§e/party chat <訊息> §7- 發送隊伍聊天訊息");
+        MessageUtil.sendMessage(player, "§6========== §e隊伍系統指令 §6==========");
+        MessageUtil.sendMessage(player, "§e/party create §7- 創建新隊伍");
+        MessageUtil.sendMessage(player, "§e/party invite <玩家> §7- 邀請玩家加入隊伍");
+        MessageUtil.sendMessage(player, "§e/party accept §7- 接受隊伍邀請");
+        MessageUtil.sendMessage(player, "§e/party decline §7- 拒絕隊伍邀請");
+        MessageUtil.sendMessage(player, "§e/party leave §7- 離開當前隊伍");
+        MessageUtil.sendMessage(player, "§e/party kick <玩家> §7- 將玩家踢出隊伍");
+        MessageUtil.sendMessage(player, "§e/party info §7- 顯示隊伍信息");
+        MessageUtil.sendMessage(player, "§e/party chat <訊息> §7- 發送隊伍聊天訊息");
     }
 
     private void handleCreateCommand(Player player) {
         // 檢查玩家是否已經在隊伍中
         if (partyManager.getPlayerParty(player.getUniqueId()) != null) {
-            player.sendMessage("§c你已經在一個隊伍中，請先離開當前隊伍");
+            MessageUtil.sendMessage(player, "§c你已經在一個隊伍中，請先離開當前隊伍");
             return;
         }
 
         // 創建新隊伍
         Party party = partyManager.createParty(player);
-        player.sendMessage("§a你創建了一個新的隊伍！使用/party invite <玩家ID> 來邀請");
+        MessageUtil.sendMessage(player, "§a你創建了一個新的隊伍！使用/party invite <玩家ID> 來邀請");
     }
 
     private void handleInviteCommand(Player player, String targetName) {
         // 查找目標玩家
         Player target = Bukkit.getPlayer(targetName);
         if (target == null || !target.isOnline()) {
-            player.sendMessage("§c找不到玩家 " + targetName + " 或該玩家不在線");
+            MessageUtil.sendMessage(player, "§c找不到玩家 " + targetName + " 或該玩家不在線");
             return;
         }
 
         // 檢查目標玩家是否已經在隊伍中
         if (partyManager.getPlayerParty(target.getUniqueId()) != null) {
-            player.sendMessage("§c該玩家已經在一個隊伍中");
+            MessageUtil.sendMessage(player, "§c該玩家已經在一個隊伍中");
             return;
         }
 
@@ -135,48 +133,40 @@ public class PartyCommand implements CommandExecutor, TabCompleter {
         // 如果玩家不在隊伍中，自動創建一個
         if (party == null) {
             party = partyManager.createParty(player);
-            player.sendMessage("§a你創建了一個新的隊伍！");
+            MessageUtil.sendMessage(player, "§a你創建了一個新的隊伍！");
         } else {
             // 檢查玩家是否是隊長
             if (!party.isOwner(player.getUniqueId())) {
-                player.sendMessage("§c只有隊長才能邀請其他玩家");
+                MessageUtil.sendMessage(player, "§c只有隊長才能邀請其他玩家");
                 return;
             }
         }
 
         // 檢查是否已經有待處理的邀請
         if (pendingInvites.containsKey(target.getUniqueId())) {
-            player.sendMessage("§c該玩家已經有一個待處理的邀請");
+            MessageUtil.sendMessage(player, "§c該玩家已經有一個待處理的邀請");
             return;
         }
 
         // 檢查隊伍是否已滿
         if (party.isFull()) {
-            player.sendMessage("§c隊伍已滿，無法邀請更多玩家");
+            MessageUtil.sendMessage(player, "§c隊伍已滿，無法邀請更多玩家");
             return;
         }
 
         // 發送邀請
         pendingInvites.put(target.getUniqueId(), player.getUniqueId());
-        player.sendMessage("§a已發送隊伍邀請給 " + target.getName());
+        MessageUtil.sendMessage(player, "§a已發送隊伍邀請給 " + target.getName());
 
         // 向目標玩家發送邀請訊息
-        target.sendMessage("§a" + player.getName() + " 邀請你加入他的隊伍");
+        MessageUtil.sendMessage(target, "§a" + player.getName() + " 邀請你加入他的隊伍");
 
-        // 創建可點擊按鈕（需要導入相關的類）
-        TextComponent acceptMessage = new TextComponent("§a[接受邀請]");
-        acceptMessage.setClickEvent(new ClickEvent(ClickEvent.Action.RUN_COMMAND, "/party accept"));
-        acceptMessage.setHoverEvent(new HoverEvent(HoverEvent.Action.SHOW_TEXT,
-                new ComponentBuilder("點擊接受邀請").color(ChatColor.GREEN).create()));
-
-        TextComponent spaceComponent = new TextComponent(" ");
-
-        TextComponent declineMessage = new TextComponent("§c[拒絕邀請]");
-        declineMessage.setClickEvent(new ClickEvent(ClickEvent.Action.RUN_COMMAND, "/party decline"));
-        declineMessage.setHoverEvent(new HoverEvent(HoverEvent.Action.SHOW_TEXT,
-                new ComponentBuilder("點擊拒絕邀請").color(ChatColor.RED).create()));
-
-        target.spigot().sendMessage(acceptMessage, spaceComponent, declineMessage);
+        // 創建可點擊按鈕（使用 Adventure MiniMessage API）
+        Component inviteButtons = MiniMessage.miniMessage().deserialize(
+                "<click:run_command:'/party accept'><hover:show_text:'<green>點擊接受邀請'><green>[接受邀請]</green></hover></click>" +
+                " " +
+                "<click:run_command:'/party decline'><hover:show_text:'<red>點擊拒絕邀請'><red>[拒絕邀請]</red></hover></click>");
+        target.sendMessage(inviteButtons);
 
         // 設定邀請超時
         Bukkit.getScheduler().runTaskLater(plugin, () -> {
@@ -184,10 +174,10 @@ public class PartyCommand implements CommandExecutor, TabCompleter {
                     pendingInvites.get(target.getUniqueId()).equals(player.getUniqueId())) {
                 pendingInvites.remove(target.getUniqueId());
                 if (target.isOnline()) {
-                    target.sendMessage("§c來自 " + player.getName() + " 的隊伍邀請已過期");
+                    MessageUtil.sendMessage(target, "§c來自 " + player.getName() + " 的隊伍邀請已過期");
                 }
                 if (player.isOnline()) {
-                    player.sendMessage("§c發送給 " + target.getName() + " 的隊伍邀請已過期");
+                    MessageUtil.sendMessage(player, "§c發送給 " + target.getName() + " 的隊伍邀請已過期");
                 }
             }
         }, 1200L); // 60秒後過期
@@ -196,7 +186,7 @@ public class PartyCommand implements CommandExecutor, TabCompleter {
     private void handleAcceptCommand(Player player) {
         // 檢查玩家是否有待處理的邀請
         if (!pendingInvites.containsKey(player.getUniqueId())) {
-            player.sendMessage("§c你沒有待處理的隊伍邀請");
+            MessageUtil.sendMessage(player, "§c你沒有待處理的隊伍邀請");
             return;
         }
 
@@ -209,21 +199,21 @@ public class PartyCommand implements CommandExecutor, TabCompleter {
 
         // 檢查邀請者是否在線
         if (inviter == null || !inviter.isOnline()) {
-            player.sendMessage("§c邀請者不在線，邀請已取消");
+            MessageUtil.sendMessage(player, "§c邀請者不在線，邀請已取消");
             return;
         }
 
         // 獲取邀請者的隊伍
         Party party = partyManager.getPlayerParty(inviterId);
         if (party == null) {
-            player.sendMessage("§c邀請者不再是隊伍的一部分，邀請已取消");
+            MessageUtil.sendMessage(player, "§c邀請者不再是隊伍的一部分，邀請已取消");
             return;
         }
 
         // 檢查隊伍人數是否已滿
         if (party.isFull()) {
-            player.sendMessage("§c隊伍已滿，無法加入");
-            inviter.sendMessage("§c" + player.getName() + " 無法加入你的隊伍，因為隊伍已滿");
+            MessageUtil.sendMessage(player, "§c隊伍已滿，無法加入");
+            MessageUtil.sendMessage(inviter, "§c" + player.getName() + " 無法加入你的隊伍，因為隊伍已滿");
             return;
         }
 
@@ -234,7 +224,7 @@ public class PartyCommand implements CommandExecutor, TabCompleter {
         for (UUID memberId : party.getMemberUUIDs()) {
             Player member = Bukkit.getPlayer(memberId);
             if (member != null && member.isOnline()) {
-                member.sendMessage("§a" + player.getName() + " 加入了隊伍！");
+                MessageUtil.sendMessage(member, "§a" + player.getName() + " 加入了隊伍！");
             }
         }
     }
@@ -242,7 +232,7 @@ public class PartyCommand implements CommandExecutor, TabCompleter {
     private void handleDeclineCommand(Player player) {
         // 檢查玩家是否有待處理的邀請
         if (!pendingInvites.containsKey(player.getUniqueId())) {
-            player.sendMessage("§c你沒有待處理的隊伍邀請");
+            MessageUtil.sendMessage(player, "§c你沒有待處理的隊伍邀請");
             return;
         }
 
@@ -254,9 +244,9 @@ public class PartyCommand implements CommandExecutor, TabCompleter {
         pendingInvites.remove(player.getUniqueId());
 
         // 通知
-        player.sendMessage("§a你拒絕了隊伍邀請");
+        MessageUtil.sendMessage(player, "§a你拒絕了隊伍邀請");
         if (inviter != null && inviter.isOnline()) {
-            inviter.sendMessage("§c" + player.getName() + " 拒絕了你的隊伍邀請");
+            MessageUtil.sendMessage(inviter, "§c" + player.getName() + " 拒絕了你的隊伍邀請");
         }
     }
 
@@ -264,7 +254,7 @@ public class PartyCommand implements CommandExecutor, TabCompleter {
         // 檢查玩家是否在隊伍中
         Party party = partyManager.getPlayerParty(player.getUniqueId());
         if (party == null) {
-            player.sendMessage("§c你不在任何隊伍中");
+            MessageUtil.sendMessage(player, "§c你不在任何隊伍中");
             return;
         }
 
@@ -281,23 +271,23 @@ public class PartyCommand implements CommandExecutor, TabCompleter {
                 if (!memberId.equals(player.getUniqueId())) {
                     Player member = Bukkit.getPlayer(memberId);
                     if (member != null && member.isOnline()) {
-                        member.sendMessage("§c隊長已離開，隊伍已解散");
+                        MessageUtil.sendMessage(member, "§c隊長已離開，隊伍已解散");
                     }
                 }
             }
-            player.sendMessage("§a你離開了隊伍，由於你是隊長，隊伍已解散");
+            MessageUtil.sendMessage(player, "§a你離開了隊伍，由於你是隊長，隊伍已解散");
         } else if (isOwner) {
             // 如果是隊長但是隊伍只有自己
-            player.sendMessage("§a你的隊伍已解散");
+            MessageUtil.sendMessage(player, "§a你的隊伍已解散");
         } else {
             // 如果不是隊長，通知所有隊員
             for (UUID memberId : members) {
                 Player member = Bukkit.getPlayer(memberId);
                 if (member != null && member.isOnline() && !member.getUniqueId().equals(player.getUniqueId())) {
-                    member.sendMessage("§c" + player.getName() + " 離開了隊伍");
+                    MessageUtil.sendMessage(member, "§c" + player.getName() + " 離開了隊伍");
                 }
             }
-            player.sendMessage("§a你離開了隊伍");
+            MessageUtil.sendMessage(player, "§a你離開了隊伍");
         }
     }
 
@@ -305,13 +295,13 @@ public class PartyCommand implements CommandExecutor, TabCompleter {
         // 檢查玩家是否在隊伍中
         Party party = partyManager.getPlayerParty(player.getUniqueId());
         if (party == null) {
-            player.sendMessage("§c你不在任何隊伍中");
+            MessageUtil.sendMessage(player, "§c你不在任何隊伍中");
             return;
         }
 
         // 檢查玩家是否是隊長
         if (!party.isOwner(player.getUniqueId())) {
-            player.sendMessage("§c只有隊長才能踢出隊員");
+            MessageUtil.sendMessage(player, "§c只有隊長才能踢出隊員");
             return;
         }
 
@@ -343,13 +333,13 @@ public class PartyCommand implements CommandExecutor, TabCompleter {
         }
 
         if (targetId == null) {
-            player.sendMessage("§c找不到玩家 " + targetName + " 或該玩家不在你的隊伍中");
+            MessageUtil.sendMessage(player, "§c找不到玩家 " + targetName + " 或該玩家不在你的隊伍中");
             return;
         }
 
         // 不能踢自己
         if (targetId.equals(player.getUniqueId())) {
-            player.sendMessage("§c你不能踢出自己，請使用 /party leave 離開隊伍");
+            MessageUtil.sendMessage(player, "§c你不能踢出自己，請使用 /party leave 離開隊伍");
             return;
         }
 
@@ -359,7 +349,7 @@ public class PartyCommand implements CommandExecutor, TabCompleter {
         if (success) {
             // 通知被踢的玩家
             if (target != null && target.isOnline()) {
-                target.sendMessage("§c你被踢出了隊伍");
+                MessageUtil.sendMessage(target, "§c你被踢出了隊伍");
             }
 
             // 通知所有隊員
@@ -367,11 +357,11 @@ public class PartyCommand implements CommandExecutor, TabCompleter {
             for (UUID memberId : party.getMemberUUIDs()) {
                 Player member = Bukkit.getPlayer(memberId);
                 if (member != null && member.isOnline()) {
-                    member.sendMessage("§c" + kickedPlayerName + " 被踢出了隊伍");
+                    MessageUtil.sendMessage(member, "§c" + kickedPlayerName + " 被踢出了隊伍");
                 }
             }
         } else {
-            player.sendMessage("§c踢出玩家失敗");
+            MessageUtil.sendMessage(player, "§c踢出玩家失敗");
         }
     }
 
@@ -379,7 +369,7 @@ public class PartyCommand implements CommandExecutor, TabCompleter {
         // 檢查玩家是否在隊伍中
         Party party = partyManager.getPlayerParty(player.getUniqueId());
         if (party == null) {
-            player.sendMessage("§c你不在任何隊伍中");
+            MessageUtil.sendMessage(player, "§c你不在任何隊伍中");
             return;
         }
 
@@ -392,13 +382,13 @@ public class PartyCommand implements CommandExecutor, TabCompleter {
         }
 
         // 顯示隊伍基本信息
-        player.sendMessage("§6========== §e隊伍信息 §6==========");
-        player.sendMessage("§a隊長: §f" + ownerName);
-        player.sendMessage("§a成員數量: §f" + party.getSize() + "/" + party.getMaxSize());
-        player.sendMessage("§a成員列表:");
+        MessageUtil.sendMessage(player, "§6========== §e隊伍信息 §6==========");
+        MessageUtil.sendMessage(player, "§a隊長: §f" + ownerName);
+        MessageUtil.sendMessage(player, "§a成員數量: §f" + party.getSize() + "/" + party.getMaxSize());
+        MessageUtil.sendMessage(player, "§a成員列表:");
 
         // 首先顯示隊長
-        player.sendMessage("  §e[隊長] §f" + ownerName);
+        MessageUtil.sendMessage(player, "  §e[隊長] §f" + ownerName);
 
         // 然後顯示其他成員
         for (UUID memberId : party.getMemberUUIDs()) {
@@ -412,7 +402,7 @@ public class PartyCommand implements CommandExecutor, TabCompleter {
                 // 檢查玩家是否在線
                 Player member = Bukkit.getPlayer(memberId);
                 String status = (member != null && member.isOnline()) ? "§a[在線]" : "§7[離線]";
-                player.sendMessage("  " + status + " §f" + memberName);
+                MessageUtil.sendMessage(player, "  " + status + " §f" + memberName);
             }
         }
     }
@@ -421,7 +411,7 @@ public class PartyCommand implements CommandExecutor, TabCompleter {
         // 檢查玩家是否在隊伍中
         Party party = partyManager.getPlayerParty(player.getUniqueId());
         if (party == null) {
-            player.sendMessage("§c你不在任何隊伍中");
+            MessageUtil.sendMessage(player, "§c你不在任何隊伍中");
             return;
         }
 
@@ -432,7 +422,7 @@ public class PartyCommand implements CommandExecutor, TabCompleter {
         for (UUID memberId : party.getMemberUUIDs()) {
             Player member = Bukkit.getPlayer(memberId);
             if (member != null && member.isOnline()) {
-                member.sendMessage(formattedMessage);
+                MessageUtil.sendMessage(member, formattedMessage);
             }
         }
     }

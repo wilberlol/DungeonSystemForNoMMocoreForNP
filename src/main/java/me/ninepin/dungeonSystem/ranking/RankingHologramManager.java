@@ -101,7 +101,7 @@ public class RankingHologramManager {
 
 
         Dungeon dungeon = findDungeon(normalizedDungeonId);
-        String displayName = dungeon != null ? dungeon.getParsedDisplayName() : normalizedDungeonId;
+        String displayName = dungeon != null ? dungeon.getDisplayName() : normalizedDungeonId;
 
         // 獲取統一格式化的排行榜數據
         List<JsonDataManager.PlayerRankingData> topPlayers = getUnifiedRankingData(normalizedDungeonId, 10);
@@ -165,7 +165,7 @@ public class RankingHologramManager {
         try {
 
             Dungeon dungeon = findDungeon(normalizedDungeonId);
-            String displayName = dungeon != null ? dungeon.getParsedDisplayName() : normalizedDungeonId;
+            String displayName = dungeon != null ? dungeon.getDisplayName() : normalizedDungeonId;
 
             // 獲取統一格式化後的排行榜數據
             List<JsonDataManager.PlayerRankingData> topPlayers = getUnifiedRankingData(normalizedDungeonId, 10);
@@ -189,14 +189,11 @@ public class RankingHologramManager {
     private void clearCacheForDungeon(String normalizedDungeonId) {
         cacheTimestamps.remove(normalizedDungeonId);
         rankingCache.remove(normalizedDungeonId);
-        plugin.getLogger().info("已清除緩存: " + normalizedDungeonId);
     }
 
     // 更新臨時全息圖
     private void updateTemporaryHolograms() {
         try {
-            plugin.getLogger().info("檢查臨時全息圖...");
-
             // 獲取所有現有的臨時全息圖
             Map<String, Hologram> existingTempHolograms = new HashMap<>();
 
@@ -211,7 +208,6 @@ public class RankingHologramManager {
                 }
             }
 
-            plugin.getLogger().info("找到 " + existingTempHolograms.size() + " 個臨時全息圖");
 
             // 更新找到的臨時全息圖
             for (Map.Entry<String, Hologram> entry : existingTempHolograms.entrySet()) {
@@ -236,7 +232,7 @@ public class RankingHologramManager {
         try {
 
             Dungeon dungeon = findDungeon(normalizedDungeonId);
-            String displayName = dungeon != null ? dungeon.getParsedDisplayName() : normalizedDungeonId;
+            String displayName = dungeon != null ? dungeon.getDisplayName() : normalizedDungeonId;
 
             // 獲取統一格式化後的排行榜數據
             List<JsonDataManager.PlayerRankingData> topPlayers = getUnifiedRankingData(normalizedDungeonId, 10);
@@ -270,27 +266,12 @@ public class RankingHologramManager {
         // 檢查緩存
         if (cacheTime != null && (currentTime - cacheTime) / 1000 < CACHE_EXPIRY_SECONDS
                 && rankingCache.containsKey(normalizedDungeonId)) {
-            plugin.getLogger().info("使用緩存的統一數據: " + normalizedDungeonId);
             return rankingCache.get(normalizedDungeonId);
         }
 
         // 從數據管理器獲取統一的排行榜數據
-        plugin.getLogger().info("從數據庫獲取統一排行榜數據: " + normalizedDungeonId);
         List<JsonDataManager.PlayerRankingData> data =
                 plugin.getRankingManager().getDungeonRanking(normalizedDungeonId, limit);
-
-        plugin.getLogger().info("獲取到統一排行榜數據: " + normalizedDungeonId + " - " + data.size() + " 筆記錄");
-
-        // 顯示詳細的數據信息（調試用）
-        if (!data.isEmpty()) {
-            plugin.getLogger().info("統一排行榜數據詳情 (" + normalizedDungeonId + "):");
-            for (int i = 0; i < Math.min(5, data.size()); i++) {
-                JsonDataManager.PlayerRankingData player = data.get(i);
-                plugin.getLogger().info("  第" + (i + 1) + "名: " + player.playerName + " - " + player.completionCount + "次");
-            }
-        } else {
-            plugin.getLogger().warning("統一排行榜數據為空: " + normalizedDungeonId);
-        }
 
         // 更新緩存
         rankingCache.put(normalizedDungeonId, data);
@@ -306,7 +287,7 @@ public class RankingHologramManager {
                                               List<JsonDataManager.PlayerRankingData> topPlayers,
                                               String dungeonId) {
         List<String> lines = new ArrayList<>();
-        String titleLine = "§6§l" + displayName + " 排行";
+        String titleLine = MessageUtil.parseToLegacyString("<gold><bold>" + displayName + " 排行</bold></gold>");
         lines.add(titleLine);
 
         // 如果沒有記錄
@@ -367,7 +348,7 @@ public class RankingHologramManager {
         plugin.getLogger().info("創建臨時排行榜: " + dungeonId + " -> " + normalizedDungeonId);
 
         Dungeon dungeon = findDungeon(dungeonId);
-        String displayName = dungeon != null ? dungeon.getParsedDisplayName() : normalizedDungeonId;
+        String displayName = dungeon != null ? dungeon.getDisplayName() : normalizedDungeonId;
 
         // 獲取統一格式化的排行榜數據
         List<JsonDataManager.PlayerRankingData> topPlayers = getUnifiedRankingData(normalizedDungeonId, 10);
@@ -447,7 +428,7 @@ public class RankingHologramManager {
         plugin.getLogger().info("創建永久排行榜: " + dungeonId + " -> 標準化為: " + normalizedDungeonId);
 
         Dungeon dungeon = findDungeon(dungeonId);
-        String displayName = dungeon != null ? dungeon.getParsedDisplayName() : normalizedDungeonId;
+        String displayName = dungeon != null ? dungeon.getDisplayName() : normalizedDungeonId;
 
         // 獲取統一格式化的排行榜數據
         List<JsonDataManager.PlayerRankingData> topPlayers = getUnifiedRankingData(normalizedDungeonId, 10);

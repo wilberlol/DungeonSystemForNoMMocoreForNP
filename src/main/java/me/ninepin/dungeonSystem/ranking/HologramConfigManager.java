@@ -109,16 +109,17 @@ public class HologramConfigManager {
                 double y = section.getDouble(dungeonId + ".y");
                 double z = section.getDouble(dungeonId + ".z");
 
+                if (worldName == null) {
+                    plugin.getLogger().warning("無法載入全息圖配置 " + dungeonId + ": 世界名稱為空，請重新設置排行榜");
+                    continue;
+                }
                 if (Bukkit.getWorld(worldName) != null) {
                     Location location = new Location(Bukkit.getWorld(worldName), x, y, z);
                     holograms.put(dungeonId, location);
-                    plugin.getLogger().info("載入全息圖配置: " + dungeonId + " 在 " + worldName);
                 } else {
                     plugin.getLogger().warning("無法載入全息圖配置 " + dungeonId + ": 世界 " + worldName + " 不存在");
                 }
             }
-        } else {
-            plugin.getLogger().info("沒有找到永久全息圖配置");
         }
 
         return holograms;
@@ -145,7 +146,7 @@ public class HologramConfigManager {
             double y = section.getDouble("y");
             double z = section.getDouble("z");
 
-            if (Bukkit.getWorld(worldName) != null) {
+            if (worldName != null && Bukkit.getWorld(worldName) != null) {
                 return new Location(Bukkit.getWorld(worldName), x, y, z);
             }
         }

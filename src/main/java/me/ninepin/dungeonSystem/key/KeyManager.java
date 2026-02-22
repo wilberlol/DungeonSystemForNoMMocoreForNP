@@ -347,13 +347,13 @@ public class KeyManager {
         // 檢查玩家是否有權限獲得這個鑰匙
         String permission = keyConfig.getString("permissions." + baseId);
         if (permission != null && !player.hasPermission(permission)) {
-            player.sendMessage("§c你沒有獲取此副本入場卷的權限");
+            MessageUtil.sendMessage(player, "§c你沒有獲取此副本入場卷的權限");
             return;
         }
 
         ItemStack keyItem = createKey(baseId);
         if (keyItem == null) {
-            player.sendMessage("§c找不到該副本的入場卷設定");
+            MessageUtil.sendMessage(player, "§c找不到該副本的入場卷設定");
             return;
         }
 

@@ -12,6 +12,7 @@ import org.bukkit.entity.Entity;
 import org.bukkit.entity.Player;
 import org.bukkit.scheduler.BukkitRunnable;
 
+import me.ninepin.dungeonSystem.utils.MessageUtil;
 import java.util.*;
 
 public class DungeonManager {
@@ -485,7 +486,7 @@ public class DungeonManager {
         if (plugin.isRevivalSystemEnabled()) {
             // 復活系統啟用，原有邏輯
             player.teleport(dungeon.getDeathWaitingArea());
-            player.sendMessage("§c你在副本中死亡，已被傳送到等待區");
+            MessageUtil.sendMessage(player, "§c你在副本中死亡，已被傳送到等待區");
 
             // 記錄玩家死亡
             Set<UUID> dungeonDeadPlayers = deadPlayers.computeIfAbsent(dungeonId, k -> new HashSet<>());
@@ -505,7 +506,7 @@ public class DungeonManager {
             }
 
             player.teleport(exitPoint);
-            player.sendMessage("§c你在副本中死亡，已被傳送出副本");
+            MessageUtil.sendMessage(player, "§c你在副本中死亡，已被傳送出副本");
 
             // 從記錄中移除此玩家
             playerDungeons.remove(playerId);
@@ -683,7 +684,7 @@ public class DungeonManager {
         for (UUID playerId : playersInDungeon) {
             Player player = Bukkit.getPlayer(playerId);
             if (player != null && player.isOnline()) {
-                player.sendMessage("§c副本挑戰失敗，5秒後將傳送出副本...");
+                MessageUtil.sendMessage(player, "§c副本挑戰失敗，5秒後將傳送出副本...");
             }
         }
 
@@ -707,7 +708,7 @@ public class DungeonManager {
                     Player player = Bukkit.getPlayer(playerId);
                     if (player != null && player.isOnline()) {
                         player.teleport(exitPoint);
-                        player.sendMessage("§c你已被傳送出副本");
+                        MessageUtil.sendMessage(player, "§c你已被傳送出副本");
                     }
                 }
 
@@ -787,7 +788,7 @@ public class DungeonManager {
             if (memberPlayer != null && memberPlayer.isOnline()) {
                 String memberDungeonId = getPlayerDungeon(memberPlayer.getUniqueId());
                 if (memberDungeonId != null) {
-                    player.sendMessage("§c队伍成员 " + memberPlayer.getName() + " 已经在副本中，无法进入新副本");
+                    MessageUtil.sendMessage(player, "§c队伍成员 " + memberPlayer.getName() + " 已经在副本中，无法进入新副本");
                     return false;
                 }
             }
@@ -802,21 +803,21 @@ public class DungeonManager {
             // 寻找该副本的可用实例
             instanceId = findAvailableInstance(dungeonId);
             if (instanceId == null) {
-                player.sendMessage("§c目前没有可用的 " + dungeonId + " 副本场地，请稍后再试");
+                MessageUtil.sendMessage(player, "§c目前没有可用的 " + dungeonId + " 副本场地，请稍后再试");
                 return false;
             }
         }
 
         Dungeon dungeon = dungeons.get(instanceId);
         if (dungeon == null) {
-            player.sendMessage("§c找不到可用的副本");
+            MessageUtil.sendMessage(player, "§c找不到可用的副本");
             return false;
         }
 
         // 检查是否可以进入
         String error = canJoinDungeon(player, dungeon);
         if (error != null) {
-            player.sendMessage("§c" + error);
+            MessageUtil.sendMessage(player, "§c" + error);
             return false;
         }
 
@@ -829,7 +830,7 @@ public class DungeonManager {
             if (memberPlayer != null && memberPlayer.isOnline()) {
                 memberPlayer.teleport(dungeon.getSpawnPoint());
                 playerDungeons.put(memberPlayer.getUniqueId(), instanceId);
-                memberPlayer.sendMessage("§a你已进入副本: §e" + getDungeonDisplayName(instanceId));
+                MessageUtil.sendMessage(memberPlayer, "§a你已进入副本: §e" + getDungeonDisplayName(instanceId));
             }
         }
 
@@ -842,7 +843,7 @@ public class DungeonManager {
             spawnDungeonMobs(dungeon);
         }
 
-        player.sendMessage("§a你的队伍已进入副本 §e" + getDungeonDisplayName(instanceId));
+        MessageUtil.sendMessage(player, "§a你的队伍已进入副本 §e" + getDungeonDisplayName(instanceId));
 
         // === 在這裡添加傷害統計初始化 ===
         // 初始化傷害統計 - 只統計在線且成功進入副本的隊員
@@ -1127,7 +1128,7 @@ public class DungeonManager {
                     if (dungeonId.equals(playerDungeons.get(memberId))) {
                         memberPlayer.teleport(exitPoint);
                         playerDungeons.remove(memberId);
-                        memberPlayer.sendMessage("§a队长已让整个队伍离开副本");
+                        MessageUtil.sendMessage(memberPlayer, "§a队长已让整个队伍离开副本");
                     }
                 }
             }
@@ -1224,7 +1225,7 @@ public class DungeonManager {
                         exitPoint = player.getWorld().getSpawnLocation();
                     }
                     player.teleport(exitPoint);
-                    player.sendMessage("§c副本已被强制清理，你已被传送出副本");
+                    MessageUtil.sendMessage(player, "§c副本已被强制清理，你已被传送出副本");
 
                     // 从记录中移除
                     playerDungeons.remove(entry.getKey());
