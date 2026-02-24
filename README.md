@@ -34,7 +34,7 @@ DungeonSystem 是一個功能強大的副本系統，專為 Minecraft 伺服器�
 | `/dungeon list` | 列出所有可用的副本及其資訊 | 玩家 |
 | `/dungeon rank <副本ID>` | 在玩家位置上方臨時顯示排行榜 | 玩家 |
 | `/dungeon key <副本ID> [數量]` | 給予自己副本入場卷 | `dungeonsystem.admin` |
-| `/dungeon revive <normal|advanced> [數量]` | 給予自己復活裝置 | `dungeonsystem.admin` |
+| `/dungeon revive <normal/advanced>`| 給予自己復活裝置 | `dungeonsystem.admin` |
 | `/dungeon mob <參數...>` | 在當前位置添加怪物到副本配置 | `dungeonsystem.admin` |
 | `/dungeon permrank <子指令>` | 管理永久性排行榜全息圖 | `dungeonsystem.admin` |
 | `/dungeon reload` | 重新讀取所有設定檔 | `dungeonsystem.admin` |
