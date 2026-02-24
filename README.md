@@ -178,5 +178,10 @@ waves:
 *   支持顯示前 10 名的玩家名稱與通關時間。
 
 ---
+---
+## 備註：
+文字顯示都支援MiniMessage，如何使用請參考 https://docs.papermc.io/misc/tools/minimessage-web-editor/
+---
+
 
 *文件更新日期：2026年2月24日*
