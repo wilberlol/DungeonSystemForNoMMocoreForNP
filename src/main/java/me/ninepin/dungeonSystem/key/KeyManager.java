@@ -7,6 +7,7 @@ import me.ninepin.dungeonSystem.utils.MessageUtil;
 import net.kyori.adventure.text.Component;
 import org.bukkit.Material;
 import org.bukkit.NamespacedKey;
+import org.bukkit.Registry;
 import org.bukkit.Sound;
 import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.configuration.file.YamlConfiguration;
@@ -210,17 +211,30 @@ public class KeyManager {
      */
     public void playKeyUseSound(Player player, String baseId) {
         Map<String, Object> soundConfig = getKeySoundConfig(baseId);
+        String soundName = (String) soundConfig.get("sound");
+        double volume = (Double) soundConfig.get("volume");
+        double pitch = (Double) soundConfig.get("pitch");
 
-        try {
-            String soundName = (String) soundConfig.get("sound");
-            double volume = (Double) soundConfig.get("volume");
-            double pitch = (Double) soundConfig.get("pitch");
+        if (soundName == null || soundName.isEmpty()) return;
 
-            Sound sound = Sound.valueOf(soundName);
+        // 使用 Registry 獲取音效
+        String keyName = soundName.toLowerCase();
+        NamespacedKey key = keyName.contains(":") ? 
+                NamespacedKey.fromString(keyName) : NamespacedKey.minecraft(keyName);
+        
+        Sound sound = key != null ? Registry.SOUNDS.get(key) : null;
+
+        if (sound != null) {
             player.playSound(player.getLocation(), sound, (float) volume, (float) pitch);
-        } catch (IllegalArgumentException e) {
-            plugin.getLogger().warning("無效的音效名稱: " + soundConfig.get("sound") + "，使用預設音效");
-            player.playSound(player.getLocation(), Sound.ENTITY_EXPERIENCE_ORB_PICKUP, 1.0f, 1.0f);
+        } else {
+            try {
+                // 如果 Registry 找不到，嘗試直接用字串播放（支援自定義音效）
+                String stringKey = soundName.toLowerCase().replace("_", ".");
+                player.playSound(player.getLocation(), stringKey, (float) volume, (float) pitch);
+            } catch (Exception ex) {
+                plugin.getLogger().warning("無法播放音效: " + soundName + "，使用預設音效");
+                player.playSound(player.getLocation(), Sound.ENTITY_EXPERIENCE_ORB_PICKUP, 1.0f, 1.0f);
+            }
         }
     }
 

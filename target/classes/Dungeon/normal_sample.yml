@@ -1,0 +1,17 @@
+display-name: "<yellow>普通哥布林副本</yellow>"
+type: "normal"
+level-required: 0
+max-players: 4
+1:
+  spawn-point: "world,100,64,100,0,0"
+  death-waiting-area: "world,110,64,110,0,0"
+  target-mob: "boss_goblin_king"
+  mobs:
+    - id: "dungeon_goblin"
+      location: "world,120,64,120,0,0"
+    - id: "dungeon_goblin"
+      location: "world,125,64,125,0,0"
+    - id: "dungeon_goblin_elite"
+      location: "world,130,64,130,0,0"
+    - id: "boss_goblin_king"
+      location: "world,140,64,140,0,0"

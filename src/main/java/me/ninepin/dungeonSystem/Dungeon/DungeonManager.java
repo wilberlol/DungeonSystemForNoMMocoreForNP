@@ -13,6 +13,10 @@ import org.bukkit.entity.Player;
 import org.bukkit.scheduler.BukkitRunnable;
 
 import me.ninepin.dungeonSystem.utils.MessageUtil;
+import org.bukkit.configuration.file.YamlConfiguration;
+
+import java.io.File;
+import java.io.IOException;
 import java.util.*;
 
 public class DungeonManager {
@@ -99,121 +103,139 @@ public class DungeonManager {
     }
 
     /**
-     * 從配置文件加載所有副本信息
+     * 從 Dungeon 資料夾加載所有副本信息
      */
     private void loadDungeons() {
-        ConfigurationSection dungeonsSection = plugin.getConfig().getConfigurationSection("dungeons");
+        File dungeonFolder = new File(plugin.getDataFolder(), "Dungeon");
+        if (!dungeonFolder.exists()) {
+            dungeonFolder.mkdirs();
+            plugin.getLogger().info("已創建 Dungeon 資料夾");
+        }
 
-        if (dungeonsSection == null) {
-            plugin.getLogger().warning("No dungeons found in config.yml!");
+        // 自動釋放範例檔案
+        String[] samples = {"normal_sample.yml", "wave_sample.yml", "survival_sample.yml"};
+        for (String sample : samples) {
+            File sampleFile = new File(dungeonFolder, sample);
+            if (!sampleFile.exists()) {
+                try {
+                    plugin.saveResource("Dungeon/" + sample, false);
+                    plugin.getLogger().info("已釋放副本範例檔案: " + sample);
+                } catch (IllegalArgumentException e) {
+                    plugin.getLogger().warning("無法釋放範例檔案 " + sample + ": " + e.getMessage());
+                }
+            }
+        }
+
+        File[] files = dungeonFolder.listFiles((dir, name) -> name.endsWith(".yml"));
+        if (files == null || files.length == 0) {
+            plugin.getLogger().warning("在 Dungeon 資料夾中找不到任何副本配置文件！");
             return;
         }
 
-        for (String instanceId : dungeonsSection.getKeys(false)) {
-            ConfigurationSection dungeonSection = dungeonsSection.getConfigurationSection(instanceId);
+        for (File file : files) {
+            String dungeonId = file.getName().replace(".yml", "");
+            YamlConfiguration dungeonConfig = YamlConfiguration.loadConfiguration(file);
 
-            if (dungeonSection == null) continue;
+            // 讀取檔案最上層的全局設定
+            String globalDisplayName = dungeonConfig.getString("display-name");
+            String globalType = dungeonConfig.getString("type", "normal");
+            int globalLevelRequired = dungeonConfig.getInt("level-required", 0);
+            int globalMaxPlayers = dungeonConfig.getInt("max-players", 4);
 
-            int levelRequired = dungeonSection.getInt("level-required", 0);
-            int maxPlayers = dungeonSection.getInt("max-players", 4);
-            String targetMobId = dungeonSection.getString("target-mob"); // 读取目标怪物ID
+            for (String instanceKey : dungeonConfig.getKeys(false)) {
+                // 跳過全局設定鍵值
+                if (instanceKey.equals("display-name") || instanceKey.equals("type") || 
+                    instanceKey.equals("level-required") || instanceKey.equals("max-players")) continue;
 
-            // 新增：讀取顯示名稱
-            String displayName = dungeonSection.getString("display-name");
+                ConfigurationSection dungeonSection = dungeonConfig.getConfigurationSection(instanceKey);
+                if (dungeonSection == null) continue;
 
-            String spawnPointStr = dungeonSection.getString("spawn-point");
-            Location spawnPoint = parseLocation(spawnPointStr);
+                String instanceId = dungeonId + "_" + instanceKey;
 
-            if (spawnPoint == null) {
-                plugin.getLogger().warning("Invalid spawn-point format for dungeon instance " + instanceId);
-                continue;
-            }
+                // 優先讀取實例內的設定，若無則使用全局設定
+                int levelRequired = dungeonSection.getInt("level-required", globalLevelRequired);
+                int maxPlayers = dungeonSection.getInt("max-players", globalMaxPlayers);
+                String targetMobId = dungeonSection.getString("target-mob");
 
-            String deathWaitingAreaStr = dungeonSection.getString("death-waiting-area");
-            Location deathWaitingArea = parseLocation(deathWaitingAreaStr);
+                // 修改：優先讀取實例內的顯示名稱，若無則使用全局顯示名稱
+                String displayName = dungeonSection.getString("display-name", globalDisplayName);
 
-            if (deathWaitingArea == null) {
-                plugin.getLogger().warning("Invalid death-waiting-area format for dungeon instance " + instanceId);
-                continue;
-            }
+                String spawnPointStr = dungeonSection.getString("spawn-point");
+                Location spawnPoint = parseLocation(spawnPointStr);
 
-            // 读取副本模式
-            String dungeonType = dungeonSection.getString("type", "normal");
+                if (spawnPoint == null) {
+                    plugin.getLogger().warning("副本實例 " + instanceId + " 的 spawn-point 格式無效");
+                    continue;
+                }
 
-            // 讀取普通副本的怪物配置（使用統一方法）
-            List<DungeonMob> mobs = new ArrayList<>();
-            if (dungeonSection.isList("mobs")) {
-                List<Map<?, ?>> mobsList = dungeonSection.getMapList("mobs");
-                loadMobConfigFromSection(mobsList, mobs, instanceId);
-            }
+                String deathWaitingAreaStr = dungeonSection.getString("death-waiting-area");
+                Location deathWaitingArea = parseLocation(deathWaitingAreaStr);
 
-            Dungeon dungeon;
+                if (deathWaitingArea == null) {
+                    plugin.getLogger().warning("副本實例 " + instanceId + " 的 death-waiting-area 格式無效");
+                    continue;
+                }
 
-            // 根据副本类型创建不同的副本实例
-            if ("wave".equalsIgnoreCase(dungeonType)) {
-                // 加载波次副本的特殊配置
-                int totalWaves = dungeonSection.getInt("waves.total", 1);
-                Map<Integer, List<DungeonMob>> waveMobs = new HashMap<>();
+                // 读取副本模式
+                String dungeonType = dungeonSection.getString("type", globalType);
 
-                // 加载每一波的怪物配置（使用統一方法）
-                ConfigurationSection wavesSection = dungeonSection.getConfigurationSection("waves");
-                if (wavesSection != null) {
-                    for (int wave = 1; wave <= totalWaves; wave++) {
-                        String waveKey = "wave-" + wave;
-                        if (wavesSection.isList(waveKey)) {
-                            List<DungeonMob> waveMobList = new ArrayList<>();
-                            List<Map<?, ?>> waveMobsList = wavesSection.getMapList(waveKey);
+                // 讀取普通副本的怪物配置（使用統一方法）
+                List<DungeonMob> mobs = new ArrayList<>();
+                if (dungeonSection.isList("mobs")) {
+                    List<Map<?, ?>> mobsList = dungeonSection.getMapList("mobs");
+                    loadMobConfigFromSection(mobsList, mobs, instanceId);
+                }
 
-                            // 使用統一的方法讀取怪物配置
-                            loadMobConfigFromSection(waveMobsList, waveMobList, instanceId + " wave " + wave);
+                Dungeon dungeon;
 
-                            waveMobs.put(wave, waveMobList);
-                        } else {
-                            plugin.getLogger().warning("No mob configuration found for wave " + wave + " in dungeon " + instanceId);
+                // 根据副本类型创建不同的副本实例
+                if ("wave".equalsIgnoreCase(dungeonType)) {
+                    // 加载波次副本的特殊配置
+                    int totalWaves = dungeonSection.getInt("waves.total", 1);
+                    Map<Integer, List<DungeonMob>> waveMobs = new HashMap<>();
+
+                    // 加载每一波的怪物配置（使用統一方法）
+                    ConfigurationSection wavesSection = dungeonSection.getConfigurationSection("waves");
+                    if (wavesSection != null) {
+                        for (int wave = 1; wave <= totalWaves; wave++) {
+                            String waveKey = "wave-" + wave;
+                            if (wavesSection.isList(waveKey)) {
+                                List<DungeonMob> waveMobList = new ArrayList<>();
+                                List<Map<?, ?>> waveMobsList = wavesSection.getMapList(waveKey);
+
+                                // 使用統一的方法讀取怪物配置
+                                loadMobConfigFromSection(waveMobsList, waveMobList, instanceId + " wave " + wave);
+
+                                waveMobs.put(wave, waveMobList);
+                            } else {
+                                plugin.getLogger().warning("在副本 " + instanceId + " 的第 " + wave + " 波中找不到怪物配置");
+                            }
                         }
                     }
-                }
 
-                // 创建波次副本实例（使用新的建構函數）
-                if (displayName != null) {
-                    dungeon = new WaveDungeon(instanceId, displayName, levelRequired, maxPlayers, spawnPoint, deathWaitingArea, mobs, targetMobId, totalWaves, waveMobs);
-                } else {
-                    dungeon = new WaveDungeon(instanceId, levelRequired, maxPlayers, spawnPoint, deathWaitingArea, mobs, targetMobId, totalWaves, waveMobs);
-                }
-                plugin.getLogger().info("Loaded wave dungeon: " + instanceId + " with " + totalWaves + " waves" + (displayName != null ? " (Display name: " + displayName + ")" : ""));
-            } else {
-                // 创建普通副本实例（使用新的建構函數）
-                if (displayName != null) {
-                    dungeon = new Dungeon(instanceId, displayName, levelRequired, maxPlayers, spawnPoint, deathWaitingArea, mobs, targetMobId);
-                } else {
-                    dungeon = new Dungeon(instanceId, levelRequired, maxPlayers, spawnPoint, deathWaitingArea, mobs, targetMobId);
-                }
-                plugin.getLogger().info("Loaded normal dungeon: " + instanceId + (displayName != null ? " (Display name: " + displayName + ")" : ""));
-            }
-
-            dungeons.put(instanceId, dungeon);
-
-            // 更新副本ID映射
-            String dungeonId = instanceId;
-            if (instanceId.contains("_")) {
-                String[] parts = instanceId.split("_");
-                if (parts.length > 1) {
-                    try {
-                        Integer.parseInt(parts[parts.length - 1]);
-                        StringBuilder dungeonIdBuilder = new StringBuilder(parts[0]);
-                        for (int i = 1; i < parts.length - 1; i++) {
-                            dungeonIdBuilder.append("_").append(parts[i]);
-                        }
-                        dungeonId = dungeonIdBuilder.toString();
-                    } catch (NumberFormatException e) {
-                        dungeonId = instanceId;
+                    // 创建波次副本实例
+                    if (displayName != null) {
+                        dungeon = new WaveDungeon(instanceId, displayName, levelRequired, maxPlayers, spawnPoint, deathWaitingArea, mobs, targetMobId, totalWaves, waveMobs);
+                    } else {
+                        dungeon = new WaveDungeon(instanceId, levelRequired, maxPlayers, spawnPoint, deathWaitingArea, mobs, targetMobId, totalWaves, waveMobs);
                     }
+                    plugin.getLogger().info("載入波次副本: " + instanceId + "，共 " + totalWaves + " 波" + (displayName != null ? " (顯示名稱: " + displayName + ")" : ""));
+                } else {
+                    // 创建普通副本实例
+                    if (displayName != null) {
+                        dungeon = new Dungeon(instanceId, displayName, levelRequired, maxPlayers, spawnPoint, deathWaitingArea, mobs, targetMobId);
+                    } else {
+                        dungeon = new Dungeon(instanceId, levelRequired, maxPlayers, spawnPoint, deathWaitingArea, mobs, targetMobId);
+                    }
+                    plugin.getLogger().info("載入普通副本: " + instanceId + (displayName != null ? " (顯示名稱: " + displayName + ")" : ""));
                 }
-            }
 
-            instanceToDungeon.put(instanceId, dungeonId);
-            List<String> instances = dungeonInstances.computeIfAbsent(dungeonId, k -> new ArrayList<>());
-            instances.add(instanceId);
+                dungeons.put(instanceId, dungeon);
+
+                instanceToDungeon.put(instanceId, dungeonId);
+                List<String> instances = dungeonInstances.computeIfAbsent(dungeonId, k -> new ArrayList<>());
+                instances.add(instanceId);
+            }
         }
     }
 
@@ -352,7 +374,7 @@ public class DungeonManager {
     /**
      * 添加怪物到波次副本的指定波次
      *
-     * @param dungeonId 副本ID
+     * @param instanceId 副本實例ID
      * @param mobId     怪物ID
      * @param location  位置
      * @param amount    數量
@@ -360,11 +382,11 @@ public class DungeonManager {
      * @param wave      波次
      * @return 是否成功添加
      */
-    public boolean addMobToWaveDungeon(String dungeonId, String mobId, Location location, int amount, double radius, int wave, int level, String type) {
+    public boolean addMobToWaveDungeon(String instanceId, String mobId, Location location, int amount, double radius, int wave, int level, String type) {
         // 檢查副本是否存在
-        Dungeon dungeon = dungeons.get(dungeonId);
+        Dungeon dungeon = dungeons.get(instanceId);
         if (!(dungeon instanceof WaveDungeon)) {
-            plugin.getLogger().warning("嘗試添加怪物到非波次副本或不存在的副本: " + dungeonId);
+            plugin.getLogger().warning("嘗試添加怪物到非波次副本或不存在的副本: " + instanceId);
             return false;
         }
 
@@ -372,7 +394,7 @@ public class DungeonManager {
 
         // 檢查波次是否有效
         if (wave < 1 || wave > waveDungeon.getTotalWaves()) {
-            plugin.getLogger().warning("無效的波次: " + wave + " (副本 " + dungeonId + " 共有 " + waveDungeon.getTotalWaves() + " 波)");
+            plugin.getLogger().warning("無效的波次: " + wave + " (副本 " + instanceId + " 共有 " + waveDungeon.getTotalWaves() + " 波)");
             return false;
         }
 
@@ -383,10 +405,10 @@ public class DungeonManager {
         waveDungeon.addMobToWave(wave, newMob);
 
         // 保存到配置文件
-        boolean saved = saveMobToWaveConfig(dungeonId, mobId, location, amount, radius, wave, level, type);
+        boolean saved = saveMobToWaveConfig(instanceId, mobId, location, amount, radius, wave, level, type);
 
         if (saved) {
-            plugin.getLogger().info("已成功添加 " + type + " 怪物 " + mobId + " 到副本 " + dungeonId + " 的第 " + wave + " 波");
+            plugin.getLogger().info("已成功添加 " + type + " 怪物 " + mobId + " 到副本 " + instanceId + " 的第 " + wave + " 波");
         }
 
         return saved;
@@ -395,7 +417,7 @@ public class DungeonManager {
     /**
      * 將怪物配置保存到波次副本的配置文件
      *
-     * @param dungeonId 副本ID
+     * @param instanceId 副本實例ID
      * @param mobId     怪物ID
      * @param location  位置
      * @param amount    數量
@@ -403,17 +425,31 @@ public class DungeonManager {
      * @param wave      波次
      * @return 是否成功保存
      */
-    private boolean saveMobToWaveConfig(String dungeonId, String mobId, Location location, int amount, double radius, int wave, int level, String type) {
+    private boolean saveMobToWaveConfig(String instanceId, String mobId, Location location, int amount, double radius, int wave, int level, String type) {
         try {
-            ConfigurationSection dungeonSection = plugin.getConfig().getConfigurationSection("dungeons." + dungeonId);
-            if (dungeonSection == null) {
-                plugin.getLogger().severe("找不到副本 " + dungeonId + " 的配置節點");
+            String dungeonId = instanceToDungeon.get(instanceId);
+            if (dungeonId == null) {
+                plugin.getLogger().severe("找不到實例 " + instanceId + " 對應的副本ID");
                 return false;
             }
 
-            ConfigurationSection wavesSection = dungeonSection.getConfigurationSection("waves");
+            String instanceKey = instanceId.substring(dungeonId.length() + 1);
+            File file = new File(plugin.getDataFolder(), "Dungeon/" + dungeonId + ".yml");
+            if (!file.exists()) {
+                plugin.getLogger().severe("找不到副本配置文件: " + file.getPath());
+                return false;
+            }
+            YamlConfiguration config = YamlConfiguration.loadConfiguration(file);
+
+            ConfigurationSection instanceSection = config.getConfigurationSection(instanceKey);
+            if (instanceSection == null) {
+                plugin.getLogger().severe("找不到副本 " + dungeonId + " 中的實例節點 " + instanceKey);
+                return false;
+            }
+
+            ConfigurationSection wavesSection = instanceSection.getConfigurationSection("waves");
             if (wavesSection == null) {
-                wavesSection = dungeonSection.createSection("waves");
+                wavesSection = instanceSection.createSection("waves");
             }
 
             String waveKey = "wave-" + wave;
@@ -445,9 +481,9 @@ public class DungeonManager {
 
             // 保存回配置
             wavesSection.set(waveKey, waveList);
-            plugin.saveConfig();
+            config.save(file);
 
-            plugin.getLogger().info("已添加 " + type + " 怪物 " + mobId + " 到副本 " + dungeonId + " 的第 " + wave + " 波配置文件");
+            plugin.getLogger().info("已添加 " + type + " 怪物 " + mobId + " 到副本 " + dungeonId + " (" + instanceKey + ") 的第 " + wave + " 波配置文件");
             return true;
         } catch (Exception e) {
             plugin.getLogger().severe("保存波次怪物配置到文件時發生錯誤: " + e.getMessage());
@@ -870,18 +906,18 @@ public class DungeonManager {
     /**
      * 添加怪物到副本配置並保存到配置文件
      *
-     * @param dungeonId 副本ID
+     * @param instanceId 副本實例ID
      * @param mobId     怪物ID
      * @param location  位置
      * @param amount    數量
      * @param radius    半徑
      * @return 是否成功添加
      */
-    public boolean addMobToDungeon(String dungeonId, String mobId, Location location, int amount, double radius, int level, String type) {
+    public boolean addMobToDungeon(String instanceId, String mobId, Location location, int amount, double radius, int level, String type) {
         // 檢查副本是否存在
-        Dungeon dungeon = dungeons.get(dungeonId);
+        Dungeon dungeon = dungeons.get(instanceId);
         if (dungeon == null) {
-            plugin.getLogger().warning("嘗試添加怪物到不存在的副本: " + dungeonId);
+            plugin.getLogger().warning("嘗試添加怪物到不存在的副本: " + instanceId);
             return false;
         }
 
@@ -892,13 +928,13 @@ public class DungeonManager {
         dungeon.getMobs().add(newMob);
 
         // 保存到配置文件
-        return saveMobToConfig(dungeonId, mobId, location, amount, radius, level, type);
+        return saveMobToConfig(instanceId, mobId, location, amount, radius, level, type);
     }
 
     /**
      * 將怪物配置保存到配置文件
      *
-     * @param dungeonId 副本ID
+     * @param instanceId 副本實例ID
      * @param mobId     怪物ID
      * @param location  位置
      * @param amount    數量
@@ -906,18 +942,32 @@ public class DungeonManager {
      * @return 是否成功保存
      */
 
-    private boolean saveMobToConfig(String dungeonId, String mobId, Location location, int amount, double radius, int level, String type) {
+    private boolean saveMobToConfig(String instanceId, String mobId, Location location, int amount, double radius, int level, String type) {
         try {
-            ConfigurationSection dungeonSection = plugin.getConfig().getConfigurationSection("dungeons." + dungeonId);
-            if (dungeonSection == null) {
-                plugin.getLogger().severe("找不到副本 " + dungeonId + " 的配置節點");
+            String dungeonId = instanceToDungeon.get(instanceId);
+            if (dungeonId == null) {
+                plugin.getLogger().severe("找不到實例 " + instanceId + " 對應的副本ID");
+                return false;
+            }
+
+            String instanceKey = instanceId.substring(dungeonId.length() + 1);
+            File file = new File(plugin.getDataFolder(), "Dungeon/" + dungeonId + ".yml");
+            if (!file.exists()) {
+                plugin.getLogger().severe("找不到副本配置文件: " + file.getPath());
+                return false;
+            }
+            YamlConfiguration config = YamlConfiguration.loadConfiguration(file);
+
+            ConfigurationSection instanceSection = config.getConfigurationSection(instanceKey);
+            if (instanceSection == null) {
+                plugin.getLogger().severe("找不到副本 " + dungeonId + " 中的實例節點 " + instanceKey);
                 return false;
             }
 
             // 獲取現有的怪物列表
             List<Map<String, Object>> mobsList = new ArrayList<>();
-            if (dungeonSection.isList("mobs")) {
-                List<Map<?, ?>> existingMobs = dungeonSection.getMapList("mobs");
+            if (instanceSection.isList("mobs")) {
+                List<Map<?, ?>> existingMobs = instanceSection.getMapList("mobs");
                 for (Map<?, ?> mob : existingMobs) {
                     Map<String, Object> mobMap = new HashMap<>();
                     for (Map.Entry<?, ?> entry : mob.entrySet()) {
@@ -940,10 +990,10 @@ public class DungeonManager {
             mobsList.add(mobMap);
 
             // 保存回配置
-            dungeonSection.set("mobs", mobsList);
-            plugin.saveConfig();
+            instanceSection.set("mobs", mobsList);
+            config.save(file);
 
-            plugin.getLogger().info("已添加 " + type + " 怪物 " + mobId + " 到副本 " + dungeonId + " 的配置文件");
+            plugin.getLogger().info("已添加 " + type + " 怪物 " + mobId + " 到副本 " + dungeonId + " (" + instanceKey + ") 的配置文件");
             return true;
         } catch (Exception e) {
             plugin.getLogger().severe("保存怪物配置到文件時發生錯誤: " + e.getMessage());
@@ -964,6 +1014,16 @@ public class DungeonManager {
      */
     public Set<UUID> getDeadPlayers(String dungeonId) {
         return deadPlayers.get(dungeonId);
+    }
+
+    /**
+     * 獲取實例ID對應的基礎副本ID
+     *
+     * @param instanceId 實例ID
+     * @return 基礎副本ID
+     */
+    public String getBaseDungeonId(String instanceId) {
+        return instanceToDungeon.getOrDefault(instanceId, instanceId);
     }
 
     /**
@@ -1268,6 +1328,8 @@ public class DungeonManager {
      */
     public void reloadDungeons() {
         dungeons.clear();
+        instanceToDungeon.clear();
+        dungeonInstances.clear();
         plugin.reloadConfig();
         loadDungeons();
     }
