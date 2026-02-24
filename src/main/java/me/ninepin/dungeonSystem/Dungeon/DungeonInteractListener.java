@@ -54,25 +54,25 @@ public class DungeonInteractListener implements Listener {
 
         // 检查玩家是否已在副本中
         if (dungeonManager.getPlayerDungeon(player.getUniqueId()) != null) {
-            player.sendMessage("§c你已經在副本中，無法再次進入其他副本");
+            MessageUtil.sendMessage(player, "§c你已經在副本中，無法再次進入其他副本");
             return;
         }
 
         // 檢查組隊系統是否可用
         if (partySystem == null) {
-            player.sendMessage("§c組隊系統不可用，無法進入副本");
+            MessageUtil.sendMessage(player, "§c組隊系統不可用，無法進入副本");
             return;
         }
 
         // 檢查是否在隊伍中
         if (!partySystem.hasParty(player.getUniqueId())) {
-            player.sendMessage("§c你必須加入一個隊伍才能使用副本入場卷");
+            MessageUtil.sendMessage(player, "§c你必須加入一個隊伍才能使用副本入場卷");
             return;
         }
 
         // 檢查是否是隊長
         if (!partySystem.isPartyLeader(player.getUniqueId())) {
-            player.sendMessage("§c只有隊長才能使用副本入場卷");
+            MessageUtil.sendMessage(player, "§c只有隊長才能使用副本入場卷");
             return;
         }
 
@@ -87,14 +87,14 @@ public class DungeonInteractListener implements Listener {
 
         // 如果找不到可用的副本实例
         if (instanceId == null) {
-            player.sendMessage("§c找不到可用的 " + baseId + " 副本，請稍後再試");
+            MessageUtil.sendMessage(player, "§c找不到可用的 " + baseId + " 副本，請稍後再試");
             return;
         }
 
         // 获取副本对象
         Dungeon dungeon = dungeonManager.getDungeon(instanceId);
         if (dungeon == null) {
-            player.sendMessage("§c找不到可用的副本");
+            MessageUtil.sendMessage(player, "§c找不到可用的副本");
             return;
         }
 
@@ -102,16 +102,16 @@ public class DungeonInteractListener implements Listener {
         boolean isDungeonWave = (dungeon instanceof WaveDungeon);
         if (isWaveKey != isDungeonWave) {
             if (isWaveKey) {
-                player.sendMessage("§c错误: 你正在使用波次副本入场券，但指定的副本不是波次模式");
+                MessageUtil.sendMessage(player, "§c错误: 你正在使用波次副本入场券，但指定的副本不是波次模式");
             } else {
-                player.sendMessage("§c错误: 你正在使用普通副本入场券，但指定的副本是波次模式");
+                MessageUtil.sendMessage(player, "§c错误: 你正在使用普通副本入场券，但指定的副本是波次模式");
             }
             return;
         }
 
         // 檢查隊伍人數是否超過副本上限
         if (partyMembers.size() > dungeon.getMaxPlayers()) {
-            player.sendMessage("§c隊伍人數 (" + partyMembers.size() + ") 超過副本上限 (" + dungeon.getMaxPlayers() + ")");
+            MessageUtil.sendMessage(player, "§c隊伍人數 (" + partyMembers.size() + ") 超過副本上限 (" + dungeon.getMaxPlayers() + ")");
             return;
         }
 
@@ -136,11 +136,11 @@ public class DungeonInteractListener implements Listener {
 
         // 如果有成員等級不足，阻止進入
         if (!membersWithoutLevel.isEmpty()) {
-            player.sendMessage("§c以下隊員等級不足，無法進入副本 §e" + dungeon.getDisplayName() + " §c(需要等級 " + dungeon.getLevelRequired() + ")：");
+            MessageUtil.sendMessage(player, "§c以下隊員等級不足，無法進入副本 §e" + dungeon.getDisplayName() + " §c(需要等級 " + dungeon.getLevelRequired() + ")：");
             for (String memberInfo : membersWithoutLevel) {
-                player.sendMessage("§c- " + memberInfo);
+                MessageUtil.sendMessage(player, "§c- " + memberInfo);
             }
-            player.sendMessage("§c請確保所有隊員等級達到要求後再試");
+            MessageUtil.sendMessage(player, "§c請確保所有隊員等級達到要求後再試");
             return;
         }
 

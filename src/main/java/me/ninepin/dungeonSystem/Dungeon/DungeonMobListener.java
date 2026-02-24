@@ -62,6 +62,10 @@ public class DungeonMobListener implements Listener {
                                 if (player != null && player.isOnline()) {
                                     player.teleport(exitPoint);
                                     player.sendMessage("§a恭喜你！副本挑戰成功，獲得豐厚獎勵！");
+
+                                    // 記錄此玩家攻略此副本
+                                    String baseDungeonId = dungeonManager.getBaseDungeonId(dungeonId);
+                                    plugin.getRankingManager().recordCompletion(player, baseDungeonId);
                                 }
                                 // 從記錄中移除玩家
                                 dungeonManager.getPlayerDungeons().remove(playerId);
@@ -116,6 +120,10 @@ public class DungeonMobListener implements Listener {
                             player.teleport(exitPoint);
                             player.sendMessage("§a恭喜你！副本挑戰成功，獲得豐厚獎勵！");
                             // 這裡可以添加獎勵發放邏輯
+
+                            // 記錄此玩家攻略此副本
+                            String baseDungeonId = dungeonManager.getBaseDungeonId(dungeonId);
+                            plugin.getRankingManager().recordCompletion(player, baseDungeonId);
                         }
                         // 從記錄中移除此玩家
                         dungeonManager.getPlayerDungeons().remove(playerId);

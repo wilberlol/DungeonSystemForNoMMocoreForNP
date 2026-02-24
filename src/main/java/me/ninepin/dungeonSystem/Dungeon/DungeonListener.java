@@ -1,6 +1,7 @@
 package me.ninepin.dungeonSystem.Dungeon;
 
 import me.ninepin.dungeonSystem.DungeonSystem;
+import me.ninepin.dungeonSystem.utils.MessageUtil;
 import org.bukkit.Location;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
@@ -45,7 +46,7 @@ public class DungeonListener implements Listener {
                     }
 
                     player.teleport(exitPoint);
-                    player.sendMessage("§a你之前在副本中，已被傳送到出生點");
+                    MessageUtil.sendMessage(player, "§a你之前在副本中，已被傳送到出生點");
                 }
             }
         }.runTaskLater(plugin, 20L); // 延迟1秒执行

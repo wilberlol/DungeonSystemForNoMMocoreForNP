@@ -1,6 +1,7 @@
 package me.ninepin.dungeonSystem.revive;
 
 import me.ninepin.dungeonSystem.DungeonSystem;
+import me.ninepin.dungeonSystem.utils.MessageUtil;
 import org.bukkit.Bukkit;
 import org.bukkit.Location;
 import org.bukkit.entity.Player;
@@ -25,27 +26,27 @@ public class ReviveManager {
      */
     public boolean startRevive(Player reviver, Player target, String reviveType, ItemStack reviveItem) {
         if (!plugin.isRevivalSystemEnabled()) {
-            reviver.sendMessage("§c復活系統目前已被禁用");
+            MessageUtil.sendMessage(reviver, "§c復活系統目前已被禁用");
             return false;
         }
         String reviverDungeonId = plugin.getDungeonManager().getPlayerDungeon(reviver.getUniqueId());
         String targetDungeonId = plugin.getDungeonManager().getPlayerDungeon(target.getUniqueId());
 
         if (reviverDungeonId == null || !reviverDungeonId.equals(targetDungeonId)) {
-            reviver.sendMessage("§c你和目標玩家不在同一個副本中");
+            MessageUtil.sendMessage(reviver, "§c你和目標玩家不在同一個副本中");
             return false;
         }
 
         // 檢查玩家是否死亡
         Set<UUID> deadPlayers = plugin.getDungeonManager().getDeadPlayers(reviverDungeonId);
         if (deadPlayers == null || !deadPlayers.contains(target.getUniqueId())) {
-            reviver.sendMessage("§c目標玩家並不需要復活");
+            MessageUtil.sendMessage(reviver, "§c目標玩家並不需要復活");
             return false;
         }
 
         // 檢查是否已經在復活中
         if (revivingPlayers.contains(target.getUniqueId())) {
-            reviver.sendMessage("§c該玩家正在被其他人復活中");
+            MessageUtil.sendMessage(reviver, "§c該玩家正在被其他人復活中");
             return false;
         }
 
@@ -74,8 +75,8 @@ public class ReviveManager {
         Location reviverLocation = reviver.getLocation().clone();
 
         // 顯示開始復活的訊息
-        reviver.sendMessage("§a開始復活 §e" + target.getName() + " §a，請保持不動，倒計時10秒");
-        target.sendMessage("§a玩家 §e" + reviver.getName() + " §a正在復活你，倒計時10秒");
+        MessageUtil.sendMessage(reviver, "§a開始復活 §e" + target.getName() + " §a，請保持不動，倒計時10秒");
+        MessageUtil.sendMessage(target, "§a玩家 §e" + reviver.getName() + " §a正在復活你，倒計時10秒");
 
         // 創建並啟動復活倒計時任務
         BukkitRunnable reviveTask = new BukkitRunnable() {
@@ -94,16 +95,16 @@ public class ReviveManager {
                 // 檢查施術者是否移動
                 if (reviverLocation.getWorld() != reviver.getLocation().getWorld() ||
                         reviverLocation.distance(reviver.getLocation()) > 0.5) {
-                    reviver.sendMessage("§c你移動了，復活取消");
-                    target.sendMessage("§c復活你的玩家移動了，復活取消");
+                    MessageUtil.sendMessage(reviver, "§c你移動了，復活取消");
+                    MessageUtil.sendMessage(target, "§c復活你的玩家移動了，復活取消");
                     cancelRevive(reviver, target);
                     return;
                 }
 
                 if (secondsLeft > 0) {
                     if (secondsLeft <= 5 || secondsLeft == 10) {
-                        reviver.sendMessage("§a復活倒計時: §e" + secondsLeft + " §a秒");
-                        target.sendMessage("§a復活倒計時: §e" + secondsLeft + " §a秒");
+                        MessageUtil.sendMessage(reviver, "§a復活倒計時: §e" + secondsLeft + " §a秒");
+                        MessageUtil.sendMessage(target, "§a復活倒計時: §e" + secondsLeft + " §a秒");
                     }
                     secondsLeft--;
                 } else {
@@ -170,15 +171,15 @@ public class ReviveManager {
         reviver.updateInventory();
 
         // 發送成功訊息
-        reviver.sendMessage("§a成功復活了 §e" + target.getName());
-        target.sendMessage("§a你被 §e" + reviver.getName() + " §a復活了");
+        MessageUtil.sendMessage(reviver, "§a成功復活了 §e" + target.getName());
+        MessageUtil.sendMessage(target, "§a你被 §e" + reviver.getName() + " §a復活了");
 
         // 向所有隊友通知
         String reviverPartyId = getPartyId(reviver);
         if (reviverPartyId != null) {
             for (Player p : Bukkit.getOnlinePlayers()) {
                 if (p != reviver && p != target && reviverPartyId.equals(getPartyId(p))) {
-                    p.sendMessage("§a隊友 §e" + target.getName() + " §a被 §e" + reviver.getName() + " §a復活了");
+                    MessageUtil.sendMessage(p, "§a隊友 §e" + target.getName() + " §a被 §e" + reviver.getName() + " §a復活了");
                 }
             }
         }

@@ -1,6 +1,7 @@
 package me.ninepin.dungeonSystem.revive;
 
 import me.ninepin.dungeonSystem.DungeonSystem;
+import me.ninepin.dungeonSystem.utils.MessageUtil;
 import org.bukkit.Bukkit;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
@@ -50,20 +51,20 @@ public class ReviveListener implements Listener {
         // 檢查玩家是否在副本中
         String dungeonId = plugin.getDungeonManager().getPlayerDungeon(player.getUniqueId());
         if (dungeonId == null) {
-            player.sendMessage("§c你必須在副本中才能使用此道具");
+            MessageUtil.sendMessage(player, "§c你必須在副本中才能使用此道具");
             return;
         }
 
         // 檢查玩家是否死亡
         Set<UUID> deadPlayers = plugin.getDungeonManager().getDeadPlayers(dungeonId);
         if (deadPlayers == null || deadPlayers.isEmpty()) {
-            player.sendMessage("§c目前沒有需要復活的玩家");
+            MessageUtil.sendMessage(player, "§c目前沒有需要復活的玩家");
             return;
         }
 
         // 檢查玩家自己是否死亡
         if (deadPlayers.contains(player.getUniqueId())) {
-            player.sendMessage("§c你已經死亡，無法使用復活裝置");
+            MessageUtil.sendMessage(player, "§c你已經死亡，無法使用復活裝置");
             return;
         }
 
@@ -111,7 +112,7 @@ public class ReviveListener implements Listener {
         // 獲取目標玩家
         Player target = Bukkit.getPlayer(targetUuid);
         if (target == null || !target.isOnline()) {
-            reviver.sendMessage("§c目標玩家不在線");
+            MessageUtil.sendMessage(reviver, "§c目標玩家不在線");
             return;
         }
 
@@ -122,7 +123,7 @@ public class ReviveListener implements Listener {
         ItemStack item = reviver.getInventory().getItemInMainHand();
         if (!reviveItemManager.isReviveItem(item) ||
                 !reviveItemManager.getReviveItemType(item).equals(reviveType)) {
-            reviver.sendMessage("§c你手上沒有對應的復活裝置");
+            MessageUtil.sendMessage(reviver, "§c你手上沒有對應的復活裝置");
             return;
         }
 

@@ -1,0 +1,36 @@
+display-name: "<red>哥布林生存挑戰</red>"
+type: "wave"
+level-required: 20
+max-players: 4
+1:
+  spawn-point: "world,-100,64,-100,0,0"
+  death-waiting-area: "world,-110,64,-110,0,0"
+  waves:
+    total: 3
+    wave-1:
+      - amount: 3
+        level: 2
+        location: test,2475.80,135.00,-2280.62
+        id: Goblin_Warrior
+        radius: 5.0
+        type: NORMAL
+    wave-2:
+      - amount: 3
+        level: 2
+        location: test,2475.80,135.00,-2280.62
+        id: Goblin_Warrior
+        radius: 5.0
+        type: NORMAL
+    wave-3:
+      - amount: 3
+        level: 2
+        location: test,2475.80,135.00,-2280.62
+        id: Goblin_Warrior
+        radius: 5.0
+        type: NORMAL
+      - amount: 1
+        level: 1
+        location: test,2475.94,135.00,-2281.59
+        id: Orc_King
+        radius: 5.0
+        type: BOSS

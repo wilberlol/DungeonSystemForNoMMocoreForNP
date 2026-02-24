@@ -1,0 +1,36 @@
+display-name: "<green>hello world</green><#ff0000>❤</#ff0000>"
+type: "wave"
+level-required: 10
+max-players: 5
+1:
+  spawn-point: "world,200,64,200,0,0"
+  death-waiting-area: "world,210,64,210,0,0"
+  target-mob: "boss_dragon"
+  mobs:
+    - id: "dungeon_guide"
+      location: "world,205,64,205,0,0"
+  waves:
+    total: 3
+    wave-1:
+      - id: "dungeon_skeleton"
+        location: "world,220,64,220,0,0"
+      - id: "dungeon_skeleton"
+        location: "world,225,64,225,0,0"
+      - id: "dungeon_skeleton"
+        location: "world,230,64,230,0,0"
+    wave-2:
+      - id: "dungeon_zombie"
+        location: "world,240,64,240,0,0"
+      - id: "dungeon_zombie"
+        location: "world,245,64,245,0,0"
+      - id: "dungeon_zombie_elite"
+        location: "world,250,64,250,0,0"
+      - id: "dungeon_zombie_elite"
+        location: "world,255,64,255,0,0"
+    wave-3:
+      - id: "dungeon_skeleton_elite"
+        location: "world,260,64,260,0,0"
+      - id: "dungeon_zombie_elite"
+        location: "world,265,64,265,0,0"
+      - id: "boss_dragon"
+        location: "world,270,64,270,0,0"

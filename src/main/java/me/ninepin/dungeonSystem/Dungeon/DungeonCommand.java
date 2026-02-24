@@ -1,6 +1,7 @@
 package me.ninepin.dungeonSystem.Dungeon;
 
 import me.ninepin.dungeonSystem.DungeonSystem;
+import me.ninepin.dungeonSystem.utils.MessageUtil;
 import org.bukkit.Location;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandExecutor;
@@ -75,17 +76,17 @@ public class DungeonCommand implements CommandExecutor, TabCompleter {
 
     private void handlePermRankCommand(Player player, String[] args) {
         if (!player.hasPermission("dungeonsystem.admin")) {
-            player.sendMessage("§c你沒有權限執行此指令");
+            MessageUtil.sendMessage(player, "§c你沒有權限執行此指令");
             return;
         }
 
         if (args.length < 2) {
-            player.sendMessage("§c用法:");
-            player.sendMessage("§c  /dungeon permrank create <副本名稱> - 在當前位置創建永久排行榜");
-            player.sendMessage("§c  /dungeon permrank remove <副本名稱> - 刪除永久排行榜");
-            player.sendMessage("§c  /dungeon permrank update <副本名稱> - 更新永久排行榜");
-            player.sendMessage("§c  /dungeon permrank updateall - 更新所有永久排行榜");
-            player.sendMessage("§c  /dungeon permrank list - 列出所有永久排行榜");
+            MessageUtil.sendMessage(player, "§c用法:");
+            MessageUtil.sendMessage(player, "§c  /dungeon permrank create <副本名稱> - 在當前位置創建永久排行榜");
+            MessageUtil.sendMessage(player, "§c  /dungeon permrank remove <副本名稱> - 刪除永久排行榜");
+            MessageUtil.sendMessage(player, "§c  /dungeon permrank update <副本名稱> - 更新永久排行榜");
+            MessageUtil.sendMessage(player, "§c  /dungeon permrank updateall - 更新所有永久排行榜");
+            MessageUtil.sendMessage(player, "§c  /dungeon permrank list - 列出所有永久排行榜");
             return;
         }
 
@@ -94,7 +95,7 @@ public class DungeonCommand implements CommandExecutor, TabCompleter {
         switch (subCmd) {
             case "create":
                 if (args.length < 3) {
-                    player.sendMessage("§c用法: /dungeon permrank create <副本名稱>");
+                    MessageUtil.sendMessage(player, "§c用法: /dungeon permrank create <副本名稱>");
                     return;
                 }
                 handleCreatePermRank(player, args[2]);
@@ -102,7 +103,7 @@ public class DungeonCommand implements CommandExecutor, TabCompleter {
 
             case "remove":
                 if (args.length < 3) {
-                    player.sendMessage("§c用法: /dungeon permrank remove <副本名稱>");
+                    MessageUtil.sendMessage(player, "§c用法: /dungeon permrank remove <副本名稱>");
                     return;
                 }
                 handleRemovePermRank(player, args[2]);
@@ -110,7 +111,7 @@ public class DungeonCommand implements CommandExecutor, TabCompleter {
 
             case "update":
                 if (args.length < 3) {
-                    player.sendMessage("§c用法: /dungeon permrank update <副本名稱>");
+                    MessageUtil.sendMessage(player, "§c用法: /dungeon permrank update <副本名稱>");
                     return;
                 }
                 handleUpdatePermRank(player, args[2]);
@@ -134,7 +135,7 @@ public class DungeonCommand implements CommandExecutor, TabCompleter {
         // 檢查副本是否存在（支持基礎ID）
         Dungeon dungeon = findDungeonFlexible(dungeonId);
         if (dungeon == null) {
-            player.sendMessage("§c找不到名為 §e" + dungeonId + " §c的副本");
+            MessageUtil.sendMessage(player, "§c找不到名為 §e" + dungeonId + " §c的副本");
             return;
         }
 
@@ -143,8 +144,8 @@ public class DungeonCommand implements CommandExecutor, TabCompleter {
 
         // 檢查是否已存在永久排行榜
         if (plugin.getHologramManager().hasPermanentRanking(actualDungeonId)) {
-            player.sendMessage("§e副本 " + dungeon.getDisplayName() + " 已存在永久排行榜");
-            player.sendMessage("§7使用 §e/dungeon permrank update " + dungeonId + " §7更新現有排行榜");
+            MessageUtil.sendMessage(player, "§e副本 " + dungeon.getDisplayName() + " 已存在永久排行榜");
+            MessageUtil.sendMessage(player, "§7使用 §e/dungeon permrank update " + dungeonId + " §7更新現有排行榜");
             return;
         }
 
@@ -152,48 +153,48 @@ public class DungeonCommand implements CommandExecutor, TabCompleter {
         Location location = player.getLocation();
         plugin.getHologramManager().createPermanentRanking(actualDungeonId, location);
 
-        player.sendMessage("§a已在當前位置創建副本 §e" + dungeon.getDisplayName() + " §a的永久排行榜");
-        player.sendMessage("§7位置: " + locationToString(location));
+        MessageUtil.sendMessage(player, "§a已在當前位置創建副本 §e" + dungeon.getDisplayName() + " §a的永久排行榜");
+        MessageUtil.sendMessage(player, "§7位置: " + locationToString(location));
     }
 
     private void handleRemovePermRank(Player player, String dungeonId) {
         // 檢查副本是否存在
         Dungeon dungeon = findDungeonFlexible(dungeonId);
         if (dungeon == null) {
-            player.sendMessage("§c找不到名為 §e" + dungeonId + " §c的副本");
+            MessageUtil.sendMessage(player, "§c找不到名為 §e" + dungeonId + " §c的副本");
             return;
         }
 
         String actualDungeonId = dungeon.getId();
 
         if (!plugin.getHologramManager().hasPermanentRanking(actualDungeonId)) {
-            player.sendMessage("§c副本 §e" + dungeon.getDisplayName() + " §c沒有永久排行榜");
+            MessageUtil.sendMessage(player, "§c副本 §e" + dungeon.getDisplayName() + " §c沒有永久排行榜");
             return;
         }
 
         plugin.getHologramManager().removePermanentRanking(actualDungeonId);
-        player.sendMessage("§a已刪除副本 §e" + dungeon.getDisplayName() + " §a的永久排行榜");
+        MessageUtil.sendMessage(player, "§a已刪除副本 §e" + dungeon.getDisplayName() + " §a的永久排行榜");
     }
 
     private void handleUpdatePermRank(Player player, String dungeonId) {
         // 檢查副本是否存在
         Dungeon dungeon = findDungeonFlexible(dungeonId);
         if (dungeon == null) {
-            player.sendMessage("§c找不到名為 §e" + dungeonId + " §c的副本");
+            MessageUtil.sendMessage(player, "§c找不到名為 §e" + dungeonId + " §c的副本");
             return;
         }
 
         String actualDungeonId = dungeon.getId();
 
         if (!plugin.getHologramManager().hasPermanentRanking(actualDungeonId)) {
-            player.sendMessage("§c副本 §e" + dungeon.getDisplayName() + " §c沒有永久排行榜");
-            player.sendMessage("§7使用 §e/dungeon permrank create " + dungeonId + " §7創建永久排行榜");
+            MessageUtil.sendMessage(player, "§c副本 §e" + dungeon.getDisplayName() + " §c沒有永久排行榜");
+            MessageUtil.sendMessage(player, "§7使用 §e/dungeon permrank create " + dungeonId + " §7創建永久排行榜");
             return;
         }
 
         // 更新永久排行榜
         plugin.getHologramManager().updatePermanentRanking(actualDungeonId);
-        player.sendMessage("§a已更新副本 §e" + dungeon.getDisplayName() + " §a的永久排行榜");
+        MessageUtil.sendMessage(player, "§a已更新副本 §e" + dungeon.getDisplayName() + " §a的永久排行榜");
     }
 
     private void handleUpdateAllPermRank(Player player) {
@@ -209,11 +210,11 @@ public class DungeonCommand implements CommandExecutor, TabCompleter {
         }
 
         if (updatedDungeons.isEmpty()) {
-            player.sendMessage("§e沒有找到任何永久排行榜");
+            MessageUtil.sendMessage(player, "§e沒有找到任何永久排行榜");
         } else {
-            player.sendMessage("§a已更新 " + updatedDungeons.size() + " 個永久排行榜:");
+            MessageUtil.sendMessage(player, "§a已更新 " + updatedDungeons.size() + " 個永久排行榜:");
             for (String displayName : updatedDungeons) {
-                player.sendMessage("§7  - " + displayName);
+                MessageUtil.sendMessage(player, "§7  - " + displayName);
             }
         }
     }
@@ -222,11 +223,11 @@ public class DungeonCommand implements CommandExecutor, TabCompleter {
         List<String> permanentRankings = plugin.getHologramManager().getAllPermanentRankingDungeons();
 
         if (permanentRankings.isEmpty()) {
-            player.sendMessage("§e目前沒有任何永久排行榜");
+            MessageUtil.sendMessage(player, "§e目前沒有任何永久排行榜");
             return;
         }
 
-        player.sendMessage("§6=== 永久排行榜列表 ===");
+        MessageUtil.sendMessage(player, "§6=== 永久排行榜列表 ===");
         for (String dungeonId : permanentRankings) {
             Dungeon dungeon = dungeonManager.getDungeon(dungeonId);
             String displayName = dungeon != null ? dungeon.getDisplayName() : dungeonId;
@@ -235,8 +236,8 @@ public class DungeonCommand implements CommandExecutor, TabCompleter {
             String hologramName = plugin.getHologramManager().getPermanentHologramName(dungeonId);
             String locationStr = plugin.getHologramManager().getHologramLocation(hologramName);
 
-            player.sendMessage("§e" + displayName + " §7(" + dungeonId + ")");
-            player.sendMessage("§7  位置: " + locationStr);
+            MessageUtil.sendMessage(player, "§e" + displayName + " §7(" + dungeonId + ")");
+            MessageUtil.sendMessage(player, "§7  位置: " + locationStr);
         }
     }
 
@@ -277,7 +278,7 @@ public class DungeonCommand implements CommandExecutor, TabCompleter {
 
     private void handleRankCommand(Player player, String[] args) {
         if (args.length < 2) {
-            player.sendMessage("§c用法: /dungeon rank <副本名稱>");
+            MessageUtil.sendMessage(player, "§c用法: /dungeon rank <副本名稱>");
             return;
         }
 
@@ -285,7 +286,7 @@ public class DungeonCommand implements CommandExecutor, TabCompleter {
 
         // 檢查副本是否存在
         if (!dungeonManager.isDungeonAvailable(dungeonId)) {
-            player.sendMessage("§c找不到名為 §e" + dungeonId + " §c的副本");
+            MessageUtil.sendMessage(player, "§c找不到名為 §e" + dungeonId + " §c的副本");
             return;
         }
 
@@ -293,7 +294,7 @@ public class DungeonCommand implements CommandExecutor, TabCompleter {
         Location location = player.getLocation().add(0, 3, 0); // 在玩家上方3格
         plugin.getHologramManager().createOrUpdateRanking(dungeonId, location, player);
 
-        player.sendMessage("§a已在您的上方顯示 §e" + dungeonId + " §a的排行榜");
+        MessageUtil.sendMessage(player, "§a已在您的上方顯示 §e" + dungeonId + " §a的排行榜");
     }
 
     /**
@@ -302,28 +303,28 @@ public class DungeonCommand implements CommandExecutor, TabCompleter {
     private void handleJoinCommand(Player player, String[] args) {
         // 檢查玩家是否有進入副本的權限
         if (!player.hasPermission("dungeon.join")) {
-            player.sendMessage("§c你沒有權限使用此指令");
+            MessageUtil.sendMessage(player, "§c你沒有權限使用此指令");
             return;
         }
 
         if (args.length < 2) {
-            player.sendMessage("§c用法: /dungeon join <副本名稱>");
+            MessageUtil.sendMessage(player, "§c用法: /dungeon join <副本名稱>");
             return;
         }
         if (dungeonManager.getPlayerDungeon(player.getUniqueId()) != null) {
-            player.sendMessage("§c你已經在副本中，無法再次進入其他副本");
+            MessageUtil.sendMessage(player, "§c你已經在副本中，無法再次進入其他副本");
             return;
         }
         // 檢查玩家是否為隊長
         me.ninepin.dungeonSystem.party.Party party = plugin.getPartyManager().getPlayerParty(player.getUniqueId());
 
         if (party == null) {
-            player.sendMessage("§c你必須加入一個隊伍才能進入副本");
+            MessageUtil.sendMessage(player, "§c你必須加入一個隊伍才能進入副本");
             return;
         }
 
         if (!party.isOwner(player.getUniqueId())) {
-            player.sendMessage("§c只有隊長才能使用此指令");
+            MessageUtil.sendMessage(player, "§c只有隊長才能使用此指令");
             return;
         }
 
@@ -345,11 +346,11 @@ public class DungeonCommand implements CommandExecutor, TabCompleter {
         Map<String, Dungeon> availableDungeons = dungeonManager.getAllDungeons();
 
         if (availableDungeons.isEmpty()) {
-            player.sendMessage("§c没有可用的副本");
+            MessageUtil.sendMessage(player, "§c没有可用的副本");
             return;
         }
 
-        player.sendMessage("§6=== 可用副本列表 ===");
+        MessageUtil.sendMessage(player, "§6=== 可用副本列表 ===");
 
         for (Dungeon dungeon : availableDungeons.values()) {
             // 获取副本类型并显示
@@ -363,7 +364,7 @@ public class DungeonCommand implements CommandExecutor, TabCompleter {
                 waveInfo = String.format(" §a| §b波次數: §f%d", waveDungeon.getTotalWaves());
             }
 
-            player.sendMessage(String.format(
+            MessageUtil.sendMessage(player, String.format(
                     "§e%s §7(§f%s§7) §7- §a等级要求: §f%d §a| §a最大人数: §f%d%s",
                     dungeon.getId(),
                     typeDisplay,
@@ -381,16 +382,16 @@ public class DungeonCommand implements CommandExecutor, TabCompleter {
         String dungeonId = dungeonManager.getPlayerDungeon(player.getUniqueId());
 
         if (dungeonId == null) {
-            player.sendMessage("§c你當前不在任何副本中");
+            MessageUtil.sendMessage(player, "§c你當前不在任何副本中");
             return;
         }
 
         boolean success = dungeonManager.leaveDungeon(player);
 
         if (success) {
-            player.sendMessage("§a你已成功離開副本");
+            MessageUtil.sendMessage(player, "§a你已成功離開副本");
         } else {
-            player.sendMessage("§c離開副本失敗");
+            MessageUtil.sendMessage(player, "§c離開副本失敗");
         }
     }
 
@@ -402,12 +403,12 @@ public class DungeonCommand implements CommandExecutor, TabCompleter {
      */
     private void handleKeyCommand(Player player, String[] args) {
         if (!player.hasPermission("dungeonsystem.admin")) {
-            player.sendMessage("§c你沒有權限執行此指令");
+            MessageUtil.sendMessage(player, "§c你沒有權限執行此指令");
             return;
         }
 
         if (args.length < 2) {
-            player.sendMessage("§c用法: /dungeon key <副本ID> [數量]");
+            MessageUtil.sendMessage(player, "§c用法: /dungeon key <副本ID> [數量]");
             return;
         }
 
@@ -419,14 +420,14 @@ public class DungeonCommand implements CommandExecutor, TabCompleter {
                 amount = Integer.parseInt(args[2]);
                 if (amount <= 0) amount = 1;
             } catch (NumberFormatException e) {
-                player.sendMessage("§c數量必須是正整數");
+                MessageUtil.sendMessage(player, "§c數量必須是正整數");
                 return;
             }
         }
 
         // 檢查是否有此副本
         if (!plugin.getDungeonManager().isDungeonAvailable(dungeonId)) {
-            player.sendMessage("§c找不到名為 §e" + dungeonId + " §c的副本");
+            MessageUtil.sendMessage(player, "§c找不到名為 §e" + dungeonId + " §c的副本");
             return;
         }
 
@@ -437,9 +438,9 @@ public class DungeonCommand implements CommandExecutor, TabCompleter {
         // 显示更多关于副本类型的信息
         if (isWaveDungeon) {
             WaveDungeon waveDungeon = (WaveDungeon) dungeon;
-            player.sendMessage("§b正在生成 §e" + dungeonId + " §b的波次副本入場卷 (總波數: " + waveDungeon.getTotalWaves() + ")");
+            MessageUtil.sendMessage(player, "§b正在生成 §e" + dungeonId + " §b的波次副本入場卷 (總波數: " + waveDungeon.getTotalWaves() + ")");
         } else {
-            player.sendMessage("§a正在生成 §e" + dungeonId + " §a的普通副本入場卷");
+            MessageUtil.sendMessage(player, "§a正在生成 §e" + dungeonId + " §a的普通副本入場卷");
         }
 
         plugin.getKeyManager().giveKey(player, dungeonId, amount);
@@ -450,12 +451,12 @@ public class DungeonCommand implements CommandExecutor, TabCompleter {
      */
     private void handleReloadCommand(Player player) {
         if (!player.hasPermission("dungeonsystem.admin")) {
-            player.sendMessage("§c你沒有權限執行此指令");
+            MessageUtil.sendMessage(player, "§c你沒有權限執行此指令");
             return;
         }
 
         plugin.reloadAllConfigs();
-        player.sendMessage("§a副本配置已重新加載");
+        MessageUtil.sendMessage(player, "§a副本配置已重新加載");
     }
 
     /**
@@ -464,23 +465,23 @@ public class DungeonCommand implements CommandExecutor, TabCompleter {
     private void handleReviveCommand(Player player, String[] args) {
         // 檢查復活系統是否啟用
         if (!plugin.isRevivalSystemEnabled()) {
-            player.sendMessage("§c復活系統目前已被禁用，無法使用此命令");
+            MessageUtil.sendMessage(player, "§c復活系統目前已被禁用，無法使用此命令");
             return;
         }
 
         if (!player.hasPermission("dungeonsystem.admin")) {
-            player.sendMessage("§c你沒有權限執行此指令");
+            MessageUtil.sendMessage(player, "§c你沒有權限執行此指令");
             return;
         }
 
         if (args.length < 2) {
-            player.sendMessage("§c用法: /dungeon revive <normal|advanced> [數量]");
+            MessageUtil.sendMessage(player, "§c用法: /dungeon revive <normal|advanced> [數量]");
             return;
         }
 
         String type = args[1].toLowerCase();
         if (!type.equals("normal") && !type.equals("advanced")) {
-            player.sendMessage("§c復活裝置類型必須是 normal 或 advanced");
+            MessageUtil.sendMessage(player, "§c復活裝置類型必須是 normal 或 advanced");
             return;
         }
 
@@ -490,7 +491,7 @@ public class DungeonCommand implements CommandExecutor, TabCompleter {
                 amount = Integer.parseInt(args[2]);
                 if (amount <= 0) amount = 1;
             } catch (NumberFormatException e) {
-                player.sendMessage("§c數量必須是正整數");
+                MessageUtil.sendMessage(player, "§c數量必須是正整數");
                 return;
             }
         }
@@ -502,37 +503,37 @@ public class DungeonCommand implements CommandExecutor, TabCompleter {
      * 發送幫助訊息
      */
     private void sendHelpMessage(Player player) {
-        player.sendMessage("§6=== DungeonSystem 幫助 ===");
-        player.sendMessage("§e/dungeon join <副本名稱> §7- 加入指定副本");
-        player.sendMessage("§e/dungeon rank <副本名稱> §7- 查看副本排行榜");
-        player.sendMessage("§e/dungeon list §7- 列出所有可用副本");
-        player.sendMessage("§e/dungeon leave §7- 離開當前副本");
+        MessageUtil.sendMessage(player, "§6=== DungeonSystem 幫助 ===");
+        MessageUtil.sendMessage(player, "§e/dungeon join <副本名稱> §7- 加入指定副本");
+        MessageUtil.sendMessage(player, "§e/dungeon rank <副本名稱> §7- 查看副本排行榜");
+        MessageUtil.sendMessage(player, "§e/dungeon list §7- 列出所有可用副本");
+        MessageUtil.sendMessage(player, "§e/dungeon leave §7- 離開當前副本");
         if (player.hasPermission("dungeonsystem.admin")) {
-            player.sendMessage("§e/dungeon reload §7- 重新加載副本配置");
-            player.sendMessage("§e/dungeon key <副本ID> [數量] §7- 獲取副本入場卷");
-            player.sendMessage("§e/dungeon mob <副本ID> <怪物ID> <數量> <半徑> §7- 在當前位置添加怪物到副本配置");
-            player.sendMessage("§e/dungeon mob <副本ID> <怪物ID> <數量> <半徑> [波次] §7- 添加怪物到副本");
-            player.sendMessage("§7  普通副本不需要波次參數，波次副本需要指定波次");
-            player.sendMessage("§e/dungeon permrank <create|remove|update|updateall|list> §7- 管理永久排行榜");
+            MessageUtil.sendMessage(player, "§e/dungeon reload §7- 重新加載副本配置");
+            MessageUtil.sendMessage(player, "§e/dungeon key <副本ID> [數量] §7- 獲取副本入場卷");
+            MessageUtil.sendMessage(player, "§e/dungeon mob <副本ID> <怪物ID> <數量> <半徑> §7- 在當前位置添加怪物到副本配置");
+            MessageUtil.sendMessage(player, "§e/dungeon mob <副本ID> <怪物ID> <數量> <半徑> [波次] §7- 添加怪物到副本");
+            MessageUtil.sendMessage(player, "§7  普通副本不需要波次參數，波次副本需要指定波次");
+            MessageUtil.sendMessage(player, "§e/dungeon permrank <create|remove|update|updateall|list> §7- 管理永久排行榜");
             // 只有在復活系統啟用時才顯示復活裝置相關命令
             if (plugin.isRevivalSystemEnabled()) {
-                player.sendMessage("§e/dungeon revive <normal|advanced> [數量] §7- 獲取復活裝置");
+                MessageUtil.sendMessage(player, "§e/dungeon revive <normal|advanced> [數量] §7- 獲取復活裝置");
             }
         }
     }
 
     private void handleMobCommand(Player player, String[] args) {
         if (!player.hasPermission("dungeonsystem.admin")) {
-            player.sendMessage("§c你沒有權限執行此指令");
+            MessageUtil.sendMessage(player, "§c你沒有權限執行此指令");
             return;
         }
 
         if (args.length < 6) {
-            player.sendMessage("§c用法:");
-            player.sendMessage("§c  普通副本: /dungeon mob <副本ID> <怪物ID> <數量> <半徑> <類型> [等級]");
-            player.sendMessage("§c  波次副本: /dungeon mob <副本ID> <怪物ID> <數量> <半徑> <類型> <波次> [等級]");
-            player.sendMessage("§7  類型: NORMAL 或 BOSS");
-            player.sendMessage("§7  等級參數可選，預設為 1");
+            MessageUtil.sendMessage(player, "§c用法:");
+            MessageUtil.sendMessage(player, "§c  普通副本: /dungeon mob <副本ID> <怪物ID> <數量> <半徑> <類型> [等級]");
+            MessageUtil.sendMessage(player, "§c  波次副本: /dungeon mob <副本ID> <怪物ID> <數量> <半徑> <類型> <波次> [等級]");
+            MessageUtil.sendMessage(player, "§7  類型: NORMAL 或 BOSS");
+            MessageUtil.sendMessage(player, "§7  等級參數可選，預設為 1");
             return;
         }
 
@@ -549,28 +550,28 @@ public class DungeonCommand implements CommandExecutor, TabCompleter {
             type = args[5].toUpperCase();
 
             if (amount < 1) {
-                player.sendMessage("§c數量必須大於 0");
+                MessageUtil.sendMessage(player, "§c數量必須大於 0");
                 return;
             }
 
             if (radius < 0) {
-                player.sendMessage("§c半徑不能為負數");
+                MessageUtil.sendMessage(player, "§c半徑不能為負數");
                 return;
             }
 
             if (!type.equals("NORMAL") && !type.equals("BOSS")) {
-                player.sendMessage("§c怪物類型必須是 NORMAL 或 BOSS");
+                MessageUtil.sendMessage(player, "§c怪物類型必須是 NORMAL 或 BOSS");
                 return;
             }
         } catch (NumberFormatException e) {
-            player.sendMessage("§c數量必須是整數，半徑必須是數字");
+            MessageUtil.sendMessage(player, "§c數量必須是整數，半徑必須是數字");
             return;
         }
 
         // 直接檢查副本實例是否存在
         Dungeon dungeon = dungeonManager.getDungeon(dungeonId);
         if (dungeon == null) {
-            player.sendMessage("§c找不到名為 §e" + dungeonId + " §c的副本");
+            MessageUtil.sendMessage(player, "§c找不到名為 §e" + dungeonId + " §c的副本");
             return;
         }
 
@@ -582,9 +583,9 @@ public class DungeonCommand implements CommandExecutor, TabCompleter {
 
             // 波次副本需要指定波次
             if (args.length < 7) {
-                player.sendMessage("§c波次副本需要指定波次！");
-                player.sendMessage("§c用法: /dungeon mob <副本ID> <怪物ID> <數量> <半徑> <類型> <波次> [等級]");
-                player.sendMessage("§e副本 " + dungeonId + " 共有 " + waveDungeon.getTotalWaves() + " 波");
+                MessageUtil.sendMessage(player, "§c波次副本需要指定波次！");
+                MessageUtil.sendMessage(player, "§c用法: /dungeon mob <副本ID> <怪物ID> <數量> <半徑> <類型> <波次> [等級]");
+                MessageUtil.sendMessage(player, "§e副本 " + dungeonId + " 共有 " + waveDungeon.getTotalWaves() + " 波");
                 return;
             }
 
@@ -592,11 +593,11 @@ public class DungeonCommand implements CommandExecutor, TabCompleter {
             try {
                 wave = Integer.parseInt(args[6]);
                 if (wave < 1 || wave > waveDungeon.getTotalWaves()) {
-                    player.sendMessage("§c波次必須在 1 到 " + waveDungeon.getTotalWaves() + " 之間");
+                    MessageUtil.sendMessage(player, "§c波次必須在 1 到 " + waveDungeon.getTotalWaves() + " 之間");
                     return;
                 }
             } catch (NumberFormatException e) {
-                player.sendMessage("§c波次必須是整數");
+                MessageUtil.sendMessage(player, "§c波次必須是整數");
                 return;
             }
 
@@ -606,13 +607,13 @@ public class DungeonCommand implements CommandExecutor, TabCompleter {
                 try {
                     level = Integer.parseInt(args[7]);
                     if (level < 1) {
-                        player.sendMessage("§c等級必須大於 0，使用預設等級 1");
+                        MessageUtil.sendMessage(player, "§c等級必須大於 0，使用預設等級 1");
                         level = 1;
                     } else if (level > 100) {
-                        player.sendMessage("§e等級過高 (" + level + ")，請確認這是您想要的等級");
+                        MessageUtil.sendMessage(player, "§e等級過高 (" + level + ")，請確認這是您想要的等級");
                     }
                 } catch (NumberFormatException e) {
-                    player.sendMessage("§c等級必須是整數，使用預設等級 1");
+                    MessageUtil.sendMessage(player, "§c等級必須是整數，使用預設等級 1");
                     level = 1;
                 }
             }
@@ -622,18 +623,18 @@ public class DungeonCommand implements CommandExecutor, TabCompleter {
 
             if (success) {
                 String typeDisplay = type.equals("BOSS") ? "§cBOSS" : "§a普通";
-                player.sendMessage("§a成功在波次副本 §e" + dungeonId + " §a的第 §e" + wave + " §a波添加" + typeDisplay + "§a怪物 §e" + mobId);
-                player.sendMessage("§a數量: " + amount + ", 半徑: " + radius + ", 等級: " + level + ", 類型: " + type);
-                player.sendMessage("§7位置: " + dungeonManager.locationToString(location));
+                MessageUtil.sendMessage(player, "§a成功在波次副本 §e" + dungeonId + " §a的第 §e" + wave + " §a波添加" + typeDisplay + "§a怪物 §e" + mobId);
+                MessageUtil.sendMessage(player, "§a數量: " + amount + ", 半徑: " + radius + ", 等級: " + level + ", 類型: " + type);
+                MessageUtil.sendMessage(player, "§7位置: " + dungeonManager.locationToString(location));
 
                 // 提供縮放信息
                 if (type.equals("NORMAL")) {
-                    player.sendMessage("§7註: 普通怪物數量會根據進入副本的玩家數量進行縮放");
+                    MessageUtil.sendMessage(player, "§7註: 普通怪物數量會根據進入副本的玩家數量進行縮放");
                 } else if (type.equals("BOSS")) {
-                    player.sendMessage("§7註: BOSS怪物等級會根據進入副本的玩家數量進行調整");
+                    MessageUtil.sendMessage(player, "§7註: BOSS怪物等級會根據進入副本的玩家數量進行調整");
                 }
             } else {
-                player.sendMessage("§c添加怪物失敗，請檢查控制台錯誤信息");
+                MessageUtil.sendMessage(player, "§c添加怪物失敗，請檢查控制台錯誤信息");
             }
         } else {
             // 普通副本
@@ -643,13 +644,13 @@ public class DungeonCommand implements CommandExecutor, TabCompleter {
                 try {
                     level = Integer.parseInt(args[6]);
                     if (level < 1) {
-                        player.sendMessage("§c等級必須大於 0，使用預設等級 1");
+                        MessageUtil.sendMessage(player, "§c等級必須大於 0，使用預設等級 1");
                         level = 1;
                     } else if (level > 100) {
-                        player.sendMessage("§e等級過高 (" + level + ")，請確認這是您想要的等級");
+                        MessageUtil.sendMessage(player, "§e等級過高 (" + level + ")，請確認這是您想要的等級");
                     }
                 } catch (NumberFormatException e) {
-                    player.sendMessage("§c等級必須是整數，使用預設等級 1");
+                    MessageUtil.sendMessage(player, "§c等級必須是整數，使用預設等級 1");
                     level = 1;
                 }
             }
@@ -659,18 +660,18 @@ public class DungeonCommand implements CommandExecutor, TabCompleter {
 
             if (success) {
                 String typeDisplay = type.equals("BOSS") ? "§cBOSS" : "§a普通";
-                player.sendMessage("§a成功在普通副本 §e" + dungeonId + " §a添加" + typeDisplay + "§a怪物 §e" + mobId);
-                player.sendMessage("§a數量: " + amount + ", 半徑: " + radius + ", 等級: " + level + ", 類型: " + type);
-                player.sendMessage("§7位置: " + dungeonManager.locationToString(location));
+                MessageUtil.sendMessage(player, "§a成功在普通副本 §e" + dungeonId + " §a添加" + typeDisplay + "§a怪物 §e" + mobId);
+                MessageUtil.sendMessage(player, "§a數量: " + amount + ", 半徑: " + radius + ", 等級: " + level + ", 類型: " + type);
+                MessageUtil.sendMessage(player, "§7位置: " + dungeonManager.locationToString(location));
 
                 // 提供縮放信息
                 if (type.equals("NORMAL")) {
-                    player.sendMessage("§7註: 普通怪物數量會根據進入副本的玩家數量進行縮放");
+                    MessageUtil.sendMessage(player, "§7註: 普通怪物數量會根據進入副本的玩家數量進行縮放");
                 } else if (type.equals("BOSS")) {
-                    player.sendMessage("§7註: BOSS怪物等級會根據進入副本的玩家數量進行調整");
+                    MessageUtil.sendMessage(player, "§7註: BOSS怪物等級會根據進入副本的玩家數量進行調整");
                 }
             } else {
-                player.sendMessage("§c添加怪物失敗，請檢查控制台錯誤信息");
+                MessageUtil.sendMessage(player, "§c添加怪物失敗，請檢查控制台錯誤信息");
             }
         }
     }

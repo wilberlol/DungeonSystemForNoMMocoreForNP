@@ -16,5 +16,5 @@ permissions:
     description: 允許使用管理員指令
     default: op
   dungeon.join:
-    description: 允許加入副本
+    description: 允許使用指令加入副本
     default: false

@@ -3,9 +3,12 @@ package me.ninepin.dungeonSystem.Dungeon;
 import io.lumine.mythic.bukkit.MythicBukkit;
 import io.lumine.mythic.core.mobs.ActiveMob;
 import me.ninepin.dungeonSystem.DungeonSystem;
+import me.ninepin.dungeonSystem.utils.MessageUtil;
 import me.ninepin.dungeonSystem.damage.PlayerRanking;
 import org.bukkit.Bukkit;
 import org.bukkit.Location;
+import org.bukkit.NamespacedKey;
+import org.bukkit.Registry;
 import org.bukkit.Sound;
 import org.bukkit.entity.Entity;
 import org.bukkit.entity.Player;
@@ -548,34 +551,52 @@ public class WaveDungeonManager {
     }
 
     /**
-     * 播放強制下一波音效给副本中的所有玩家
+     * 向副本中的所有玩家廣播音效
+     *
+     * @param dungeonId 副本ID
+     * @param soundName 音效名稱（支援 Enum 名稱或小寫點狀格式）
+     * @param volume    音量
+     * @param pitch     音調
      */
-    private void playForceNextWaveSound(String dungeonId) {
-        DungeonSystem.SoundConfig config = plugin.getSoundConfig();
-        if (config == null) {
-            plugin.getLogger().warning("音效配置未載入，跳過強制下一波音效播放");
-            return;
-        }
+    private void broadcastSound(String dungeonId, String soundName, double volume, double pitch) {
+        if (soundName == null || soundName.isEmpty()) return;
 
-        try {
-            // 使用倒數音效，但音調調低一點表示警告
-            Sound sound = Sound.valueOf(config.getCountdownSound());
-            for (Map.Entry<UUID, String> entry : dungeonManager.getPlayerDungeons().entrySet()) {
-                if (dungeonId.equals(entry.getValue())) {
-                    Player player = Bukkit.getPlayer(entry.getKey());
-                    if (player != null && player.isOnline()) {
-                        player.playSound(player.getLocation(), sound,
-                                (float) config.getVolume(),
-                                (float) (config.getCountdownPitch() * 0.8)); // 音調調低表示警告
+        for (Map.Entry<UUID, String> entry : dungeonManager.getPlayerDungeons().entrySet()) {
+            if (dungeonId.equals(entry.getValue())) {
+                Player player = Bukkit.getPlayer(entry.getKey());
+                if (player != null && player.isOnline()) {
+                    // 使用 Registry 獲取音效（現代做法，替代 valueOf）
+                    String keyName = soundName.toLowerCase();
+                    NamespacedKey key = keyName.contains(":") ? 
+                            NamespacedKey.fromString(keyName) : NamespacedKey.minecraft(keyName);
+                    
+                    Sound sound = key != null ? Registry.SOUNDS.get(key) : null;
+
+                    if (sound != null) {
+                        player.playSound(player.getLocation(), sound, (float) volume, (float) pitch);
+                    } else {
+                        // 如果 Registry 找不到，嘗試直接用字串播放（支援自定義音效）
+                        String stringKey = soundName.toLowerCase().replace("_", ".");
+                        player.playSound(player.getLocation(), stringKey, (float) volume, (float) pitch);
                     }
                 }
             }
-        } catch (IllegalArgumentException e) {
-            plugin.getLogger().warning("無效的音效: " + config.getCountdownSound());
+        }
+    }
+
+    /**
+     * 播放強制下一波音效
+     */
+    private void playForceNextWaveSound(String dungeonId) {
+        DungeonSystem.SoundConfig config = plugin.getSoundConfig();
+        if (config != null) {
+            broadcastSound(dungeonId, config.getForceNextWaveSound(), 
+                    config.getVolume(), config.getForceNextWavePitch());
         }
     }
 
     private void cleanupForceNextWaveCountdown(String dungeonId) {
+        // ... (保持原樣)
         // 取消任务
         BukkitTask oldTask = forceNextWaveTasks.remove(dungeonId);
         if (oldTask != null) {
@@ -630,110 +651,42 @@ public class WaveDungeonManager {
     }
 
     /**
-     * 播放倒數音效给副本中的所有玩家
+     * 播放倒數音效
      */
     private void playCountdownSound(String dungeonId) {
         DungeonSystem.SoundConfig config = plugin.getSoundConfig();
-        if (config == null) {
-            plugin.getLogger().warning("音效配置未載入，跳過倒數音效播放");
-            return;
-        }
-
-        try {
-            Sound sound = Sound.valueOf(config.getCountdownSound());
-            for (Map.Entry<UUID, String> entry : dungeonManager.getPlayerDungeons().entrySet()) {
-                if (dungeonId.equals(entry.getValue())) {
-                    Player player = Bukkit.getPlayer(entry.getKey());
-                    if (player != null && player.isOnline()) {
-                        player.playSound(player.getLocation(), sound,
-                                (float) config.getVolume(),
-                                (float) config.getCountdownPitch());
-                    }
-                }
-            }
-        } catch (IllegalArgumentException e) {
-            plugin.getLogger().warning("無效的倒數音效: " + config.getCountdownSound());
+        if (config != null) {
+            broadcastSound(dungeonId, config.getCountdownSound(), config.getVolume(), config.getCountdownPitch());
         }
     }
 
     /**
-     * 播放波次完成音效给副本中的所有玩家
+     * 播放波次完成音效
      */
     private void playWaveClearSound(String dungeonId) {
         DungeonSystem.SoundConfig config = plugin.getSoundConfig();
-        if (config == null) {
-            plugin.getLogger().warning("音效配置未載入，跳過波次完成音效播放");
-            return;
-        }
-
-        try {
-            Sound sound = Sound.valueOf(config.getWaveClearSound());
-            for (Map.Entry<UUID, String> entry : dungeonManager.getPlayerDungeons().entrySet()) {
-                if (dungeonId.equals(entry.getValue())) {
-                    Player player = Bukkit.getPlayer(entry.getKey());
-                    if (player != null && player.isOnline()) {
-                        player.playSound(player.getLocation(), sound,
-                                (float) config.getVolume(),
-                                (float) config.getPitch());
-                    }
-                }
-            }
-        } catch (IllegalArgumentException e) {
-            plugin.getLogger().warning("無效的波次完成音效: " + config.getWaveClearSound());
+        if (config != null) {
+            broadcastSound(dungeonId, config.getWaveClearSound(), config.getVolume(), config.getPitch());
         }
     }
 
     /**
-     * 播放副本完成音效给副本中的所有玩家
+     * 播放副本完成音效
      */
     private void playDungeonCompleteSound(String dungeonId) {
         DungeonSystem.SoundConfig config = plugin.getSoundConfig();
-        if (config == null) {
-            plugin.getLogger().warning("音效配置未載入，跳過副本完成音效播放");
-            return;
-        }
-
-        try {
-            Sound sound = Sound.valueOf(config.getDungeonCompleteSound());
-            for (Map.Entry<UUID, String> entry : dungeonManager.getPlayerDungeons().entrySet()) {
-                if (dungeonId.equals(entry.getValue())) {
-                    Player player = Bukkit.getPlayer(entry.getKey());
-                    if (player != null && player.isOnline()) {
-                        player.playSound(player.getLocation(), sound,
-                                (float) config.getVolume(),
-                                (float) config.getPitch());
-                    }
-                }
-            }
-        } catch (IllegalArgumentException e) {
-            plugin.getLogger().warning("無效的副本完成音效: " + config.getDungeonCompleteSound());
+        if (config != null) {
+            broadcastSound(dungeonId, config.getDungeonCompleteSound(), config.getVolume(), config.getPitch());
         }
     }
 
     /**
-     * 播放波次開始音效给副本中的所有玩家
+     * 播放波次開始音效
      */
     private void playWaveStartSound(String dungeonId) {
         DungeonSystem.SoundConfig config = plugin.getSoundConfig();
-        if (config == null) {
-            plugin.getLogger().warning("音效配置未載入，跳過波次開始音效播放");
-            return;
-        }
-
-        try {
-            Sound sound = Sound.valueOf(config.getWaveStartSound());
-            for (Map.Entry<UUID, String> entry : dungeonManager.getPlayerDungeons().entrySet()) {
-                if (dungeonId.equals(entry.getValue())) {
-                    Player player = Bukkit.getPlayer(entry.getKey());
-                    if (player != null && player.isOnline()) {
-                        player.playSound(player.getLocation(), sound,
-                                (float) config.getVolume(),
-                                (float) config.getPitch());
-                    }
-                }
-            }
-        } catch (IllegalArgumentException e) {
-            plugin.getLogger().warning("無效的波次開始音效: " + config.getWaveStartSound());
+        if (config != null) {
+            broadcastSound(dungeonId, config.getWaveStartSound(), config.getVolume(), config.getPitch());
         }
     }
 
@@ -829,9 +782,11 @@ public class WaveDungeonManager {
             if (dungeonId.equals(entry.getValue())) {
                 Player player = Bukkit.getPlayer(entry.getKey());
                 if (player != null && player.isOnline()) {
+                    // 獲取基礎副本ID（用於排行榜統一）
+                    String baseDungeonId = dungeonManager.getBaseDungeonId(dungeonId);
                     // 記錄此玩家攻略此副本
-                    plugin.getRankingManager().recordCompletion(player, dungeonId);
-                    plugin.getLogger().info("記錄玩家 " + player.getName() + " 完成副本 " + dungeonId);
+                    plugin.getRankingManager().recordCompletion(player, baseDungeonId);
+                    plugin.getLogger().info("記錄玩家 " + player.getName() + " 完成副本 " + baseDungeonId + " (實例: " + dungeonId + ")");
                 }
             }
         }
@@ -973,7 +928,7 @@ public class WaveDungeonManager {
             if (dungeonId.equals(entry.getValue())) {
                 Player player = Bukkit.getPlayer(entry.getKey());
                 if (player != null && player.isOnline()) {
-                    player.sendMessage(message);
+                    MessageUtil.sendMessage(player, message);
                 }
             }
         }
