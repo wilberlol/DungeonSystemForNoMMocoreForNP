@@ -3,6 +3,7 @@ version: 1.0
 main: me.ninepin.dungeonSystem.DungeonSystem
 api-version: 1.16
 depend: [ MythicMobs,DecentHolograms,PlaceholderAPI]
+softdepend: [ DiscordSRV, MMOCore ]
 commands:
   dungeon:
     description: 副本系統主指令
