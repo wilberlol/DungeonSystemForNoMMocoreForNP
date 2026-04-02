@@ -16,6 +16,7 @@ import org.bukkit.scheduler.BukkitRunnable;
 import org.bukkit.scheduler.BukkitTask;
 
 import java.util.*;
+import java.util.stream.Collectors;
 
 public class WaveDungeonManager {
 
@@ -794,10 +795,21 @@ public class WaveDungeonManager {
 
         // 新增：播放副本完成音效（替換原有的硬編碼音效）
         playDungeonCompleteSound(dungeonId);
+
+        // 生成排名（只呼叫一次，同時給遊戲內顯示和 Discord 通知使用）
+        List<PlayerRanking> rankings = Collections.emptyList();
         if (plugin.getDamageTracker().hasDungeonStats(dungeonId)) {
-            List<PlayerRanking> rankings = plugin.getDamageTracker().generateRankings(dungeonId);
+            rankings = plugin.getDamageTracker().generateRankings(dungeonId);
             displayRankingsToPlayers(dungeonId, rankings);
         }
+
+        // 發送 Discord 通關通知
+        Set<UUID> clearPlayerUUIDs = dungeonManager.getPlayerDungeons().entrySet().stream()
+                .filter(entry -> dungeonId.equals(entry.getValue()))
+                .map(Map.Entry::getKey)
+                .collect(Collectors.toSet());
+        long durationSeconds = rankings.isEmpty() ? -1 : rankings.get(0).getDuration();
+        plugin.getDiscordNotifier().sendClearMessage(dungeonId, clearPlayerUUIDs, durationSeconds);
 
         // 这里可以添加奖励发放逻辑
         // 例如：为每个玩家发放奖励道具、经验或金币

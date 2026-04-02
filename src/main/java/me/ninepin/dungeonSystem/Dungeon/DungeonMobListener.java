@@ -9,9 +9,8 @@ import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
 import org.bukkit.scheduler.BukkitRunnable;
 
-import java.util.HashMap;
-import java.util.Map;
-import java.util.UUID;
+import java.util.*;
+import java.util.stream.Collectors;
 
 public class DungeonMobListener implements Listener {
 
@@ -41,6 +40,21 @@ public class DungeonMobListener implements Listener {
                         }
                     }
                 }
+
+                // 發送 Discord 通關通知
+                Set<UUID> clearPlayerUUIDs = dungeonManager.getPlayerDungeons().entrySet().stream()
+                        .filter(pe -> dungeonId.equals(pe.getValue()))
+                        .map(Map.Entry::getKey)
+                        .collect(Collectors.toSet());
+                // 計算耗時（從 DamageTracker 的統計起始時間推算）
+                long durationSeconds = -1;
+                if (plugin.getDamageTracker().hasDungeonStats(dungeonId)) {
+                    var rankings = plugin.getDamageTracker().generateRankings(dungeonId);
+                    if (!rankings.isEmpty()) {
+                        durationSeconds = rankings.get(0).getDuration();
+                    }
+                }
+                plugin.getDiscordNotifier().sendClearMessage(dungeonId, clearPlayerUUIDs, durationSeconds);
 
                 // 延遲5秒後處理副本完成
                 new BukkitRunnable() {

@@ -80,6 +80,10 @@
             <id>phoenix</id>
             <url>https://nexus.phoenixdevt.fr/repository/maven-public/</url>
         </repository>
+        <repository>
+            <id>scarsz-nexus</id>
+            <url>https://nexus.scarsz.me/content/groups/public/</url>
+        </repository>
 
     </repositories>
 
@@ -126,6 +130,13 @@
             <groupId>net.kyori</groupId>
             <artifactId>adventure-text-minimessage</artifactId>
             <version>4.22.0</version>
+        </dependency>
+        <dependency>
+            <groupId>com.discordsrv</groupId>
+            <artifactId>discordsrv</artifactId>
+            <version>1.28.0</version>
+            <scope>provided</scope>
+            <optional>true</optional>
         </dependency>
     </dependencies>
 </project>

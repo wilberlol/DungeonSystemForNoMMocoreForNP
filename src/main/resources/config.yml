@@ -1,4 +1,6 @@
 # config.yml 文件示例
+# 設定檔版本（插件更新時自動合併新增的設定項，不會覆蓋你已修改的值）
+config-version: 2
 key-settings:
   # 鑰匙使用冷卻時間（秒）
   # 預設值：180 (3分鐘)
@@ -26,6 +28,33 @@ wave-dungeon:
     pitch: 1.0
     countdown-pitch: 1.2
     force-next-wave-pitch: 0.8  # 新增：強制下一波音效的音調
+# Discord 通關通知設定（需安裝 DiscordSRV）
+discord:
+  enabled: false
+  # Discord 頻道 ID（支援多個頻道同時發送）
+  channel-ids:
+    - "在此填入頻道ID"
+  embed:
+    # 側邊條顏色（#RRGGBB 格式）
+    color: "#FFD700"
+    title: "\uD83C\uDFC6 副本通關！"
+    # 可用佔位符：{dungeon_name}, {players}, {player_count},
+    #            {time}, {dungeon_type}, {mvp_name}, {mvp_damage}
+    description: "**{dungeon_name}** 已被成功攻略！"
+    fields:
+      - name: "\uD83D\uDC65 通關玩家"
+        value: "{players}"
+        inline: true
+      - name: "\u23F1 通關耗時"
+        value: "{time}"
+        inline: true
+      - name: "\u2B50 MVP"
+        value: "{mvp_name}（傷害：{mvp_damage}）"
+        inline: true
+    footer: "副本類型：{dungeon_type} | 人數：{player_count}"
+    # 縮圖 URL（選填，留空則不顯示）
+    thumbnail: ""
+
 mob-scaling:
   # 普通怪物數量倍率（根據玩家數量）
   normal-multipliers:

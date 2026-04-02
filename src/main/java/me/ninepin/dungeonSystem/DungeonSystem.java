@@ -2,6 +2,7 @@ package me.ninepin.dungeonSystem;
 
 import me.ninepin.dungeonSystem.Dungeon.*;
 import me.ninepin.dungeonSystem.damage.DamageTracker;
+import me.ninepin.dungeonSystem.discord.DiscordNotifier;
 import me.ninepin.dungeonSystem.key.KeyManager;
 import me.ninepin.dungeonSystem.party.*;
 import me.ninepin.dungeonSystem.ranking.DungeonRankingManager;
@@ -10,8 +11,11 @@ import me.ninepin.dungeonSystem.ranking.RankingHologramManager;
 import me.ninepin.dungeonSystem.revive.ReviveItemManager;
 import me.ninepin.dungeonSystem.revive.ReviveListener;
 import org.bukkit.Bukkit;
+import org.bukkit.configuration.file.YamlConfiguration;
 import org.bukkit.plugin.java.JavaPlugin;
 
+import java.io.InputStreamReader;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -26,12 +30,18 @@ public class DungeonSystem extends JavaPlugin {
     private DungeonRankingManager rankingManager;
     private RankingHologramManager hologramManager;
     private DamageTracker damageTracker;
+    private DiscordNotifier discordNotifier;
     private IPartySystem partySystem;
+
+    // 內建預設 config 的版本號（每次新增設定項時遞增）
+    private static final int LATEST_CONFIG_VERSION = 2;
 
     @Override
     public void onEnable() {
-        // 保存默认配置
+        // 保存默认配置（僅在檔案不存在時建立）
         saveDefaultConfig();
+        // 檢查並合併新版設定項
+        migrateConfig();
         loadSoundConfig();
         // 初始化各个管理器
         damageTracker = new DamageTracker(this);
@@ -83,6 +93,9 @@ public class DungeonSystem extends JavaPlugin {
         } else {
             getLogger().warning("PlaceholderAPI 未安裝，個人化功能將無法使用");
         }
+        // 初始化 Discord 通知（DiscordSRV 為選配依賴）
+        discordNotifier = new DiscordNotifier(this);
+
         // 获取WaveDungeonManager实例
         waveDungeonManager = dungeonManager.getWaveDungeonManager();
 
@@ -126,6 +139,50 @@ public class DungeonSystem extends JavaPlugin {
 
     public DamageTracker getDamageTracker() {
         return damageTracker;
+    }
+
+    public DiscordNotifier getDiscordNotifier() {
+        return discordNotifier;
+    }
+
+    /**
+     * 檢查 config-version，將 JAR 內預設 config 中缺少的 key 合併到使用者的 config.yml。
+     * 只補缺少的 key，不會覆蓋使用者已修改的值。
+     */
+    private void migrateConfig() {
+        int userVersion = getConfig().getInt("config-version", 0);
+        if (userVersion >= LATEST_CONFIG_VERSION) {
+            return; // 已是最新版，不需要合併
+        }
+
+        getLogger().info("偵測到 config.yml 版本 " + userVersion + " → " + LATEST_CONFIG_VERSION + "，正在合併新增的設定項...");
+
+        try (InputStreamReader reader = new InputStreamReader(
+                getResource("config.yml"), StandardCharsets.UTF_8)) {
+            YamlConfiguration defaultConfig = YamlConfiguration.loadConfiguration(reader);
+
+            int added = 0;
+            for (String key : defaultConfig.getKeys(true)) {
+                // 只複製葉子節點（非 section），section 會在設定子 key 時自動建立
+                if (!defaultConfig.isConfigurationSection(key) && !getConfig().contains(key)) {
+                    getConfig().set(key, defaultConfig.get(key));
+                    added++;
+                    getLogger().info("  新增設定項: " + key);
+                }
+            }
+
+            // 更新版本號
+            getConfig().set("config-version", LATEST_CONFIG_VERSION);
+            saveConfig();
+
+            if (added > 0) {
+                getLogger().info("config.yml 已合併 " + added + " 個新設定項，版本更新至 " + LATEST_CONFIG_VERSION);
+            } else {
+                getLogger().info("config.yml 版本號已更新至 " + LATEST_CONFIG_VERSION + "（無新增設定項）");
+            }
+        } catch (Exception e) {
+            getLogger().warning("合併 config.yml 時發生錯誤: " + e.getMessage());
+        }
     }
 
     /**
@@ -290,6 +347,11 @@ public class DungeonSystem extends JavaPlugin {
 
         if (keyManager != null) {
             keyManager.reload();
+        }
+
+        // 重新載入 Discord 通知設定
+        if (discordNotifier != null) {
+            discordNotifier.reload();
         }
     }
 
