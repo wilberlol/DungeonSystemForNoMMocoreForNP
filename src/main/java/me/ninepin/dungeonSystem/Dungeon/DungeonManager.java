@@ -1027,6 +1027,20 @@ public class DungeonManager {
     }
 
     /**
+     * 取得指定副本的第一個實例 ID（不論是否佔用，純粹取 ID）
+     *
+     * @param baseDungeonId 基礎副本 ID（例如 "survival_slime"）
+     * @return 第一個實例 ID（例如 "survival_slime_1"），或 null
+     */
+    public String getFirstInstanceId(String baseDungeonId) {
+        List<String> instances = dungeonInstances.get(baseDungeonId);
+        if (instances != null && !instances.isEmpty()) {
+            return instances.get(0);
+        }
+        return null;
+    }
+
+    /**
      * 獲取所有可用的副本ID（不包括實例ID）
      */
     public List<String> getAvailableDungeonIds() {

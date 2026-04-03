@@ -8,6 +8,11 @@ import org.bukkit.entity.Player;
 public class MessageUtil {
     private static final MiniMessage miniMessage = MiniMessage.miniMessage();
     private static final LegacyComponentSerializer legacySerializer = LegacyComponentSerializer.legacySection();
+    // 支援 hex 色碼的序列化器（gradient 會被展開為逐字元 §x§R§R§G§G§B§B 格式）
+    private static final LegacyComponentSerializer hexLegacySerializer = LegacyComponentSerializer.builder()
+            .character('§')
+            .hexColors()
+            .build();
 
     /**
      * 將 legacy § 色碼轉換為對應的 MiniMessage tag，
@@ -50,5 +55,14 @@ public class MessageUtil {
 
     public static String parseToLegacyString(String message) {
         return legacySerializer.serialize(miniMessage.deserialize(convertLegacyToMiniMessage(message)));
+    }
+
+    /**
+     * 將 MiniMessage 格式字串轉換為支援 hex 色碼的 legacy 字串。
+     * gradient / hex color 會被展開為逐字元 §x§R§R§G§G§B§B 格式，
+     * 適用於 DecentHolograms 等支援 hex 的顯示元件。
+     */
+    public static String parseToHexLegacyString(String message) {
+        return hexLegacySerializer.serialize(miniMessage.deserialize(convertLegacyToMiniMessage(message)));
     }
 }
