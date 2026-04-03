@@ -287,9 +287,10 @@ public class RankingHologramManager {
                                               List<JsonDataManager.PlayerRankingData> topPlayers,
                                               String dungeonId) {
         List<String> lines = new ArrayList<>();
-        // 剝除 displayName 中可能混入的 legacy § 色碼，保留 MiniMessage tag
+        // 剝除 displayName 中可能混入的 legacy § 色碼，保留 MiniMessage tag（含 gradient）
         String sanitizedDisplayName = displayName.replaceAll("§[0-9a-fk-orx]", "");
-        String titleLine = MessageUtil.parseToLegacyString("<gold><bold>" + sanitizedDisplayName + " 排行</bold></gold>");
+        // 讓 display-name 自帶的格式（gradient、hex color 等）正常顯示，" 排行" 用金色粗體
+        String titleLine = MessageUtil.parseToHexLegacyString(sanitizedDisplayName + " <gold><bold>排行</bold></gold>");
         lines.add(titleLine);
 
         // 如果沒有記錄
@@ -380,32 +381,50 @@ public class RankingHologramManager {
     }
 
     /**
-     * 智能尋找副本
+     * 智能尋找副本（支援 instanceId、baseDungeonId、normalizedId）
      */
     private Dungeon findDungeon(String dungeonId) {
-        // 首先嘗試直接查找原始ID
+        if (dungeonId == null) return null;
+
+        // 1. 直接查找（完整 instanceId，例如 "survival_slime_1"）
         Dungeon dungeon = plugin.getDungeonManager().getDungeon(dungeonId);
         if (dungeon != null) {
             return dungeon;
         }
 
-        // 如果原始ID找不到，嘗試標準化ID
-        String normalizedId = normalizeDungeonId(dungeonId);
-        dungeon = plugin.getDungeonManager().getDungeon(normalizedId);
-        if (dungeon != null) {
-            return dungeon;
+        // 2. 用 baseDungeonId 查找第一個實例（例如 "survival_slime" → 找到 "survival_slime_1"）
+        String firstInstance = plugin.getDungeonManager().getFirstInstanceId(dungeonId);
+        if (firstInstance != null) {
+            dungeon = plugin.getDungeonManager().getDungeon(firstInstance);
+            if (dungeon != null) {
+                return dungeon;
+            }
         }
 
-        // 搜索相關實例
-        for (Map.Entry<String, Dungeon> entry : plugin.getDungeonManager().getAllDungeons().entrySet()) {
-            String instanceId = entry.getKey();
+        // 3. 標準化後再嘗試（例如 "survival_slime_1" → normalize 為 "survival_slime" → 找實例）
+        String normalizedId = normalizeDungeonId(dungeonId);
+        if (!normalizedId.equals(dungeonId)) {
+            dungeon = plugin.getDungeonManager().getDungeon(normalizedId);
+            if (dungeon != null) {
+                return dungeon;
+            }
+            firstInstance = plugin.getDungeonManager().getFirstInstanceId(normalizedId);
+            if (firstInstance != null) {
+                dungeon = plugin.getDungeonManager().getDungeon(firstInstance);
+                if (dungeon != null) {
+                    return dungeon;
+                }
+            }
+        }
 
-            // 檢查是否匹配標準化後的ID
-            if (normalizeDungeonId(instanceId).equals(normalizedId)) {
+        // 4. 最後手段：遍歷所有副本，比對 normalizedId
+        for (Map.Entry<String, Dungeon> entry : plugin.getDungeonManager().getAllDungeons().entrySet()) {
+            if (normalizeDungeonId(entry.getKey()).equals(normalizedId)) {
                 return entry.getValue();
             }
         }
 
+        plugin.getLogger().warning("[findDungeon] 找不到副本: " + dungeonId + " (normalized: " + normalizedId + ")");
         return null;
     }
 
